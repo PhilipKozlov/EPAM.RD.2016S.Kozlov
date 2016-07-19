@@ -12,8 +12,9 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            var services = Configurator.ConfigureServices();
-            var user = services.FirstOrDefault().FindByNameAndLastName("Jane", "Doe");
+            var configurator = new Configurator();
+            configurator.ConfigurateServices();
+            var user = configurator.Services.FirstOrDefault().FindByNameAndLastName("Jane", "Doe");
             Console.WriteLine(user.FirstOrDefault());
 
             var newUser = new User
@@ -25,9 +26,9 @@ namespace Client
                 Gender = Gender.Male
             };
 
-            var newUserId = services.FirstOrDefault().CreateUser(newUser);
+            var newUserId = configurator.Services.FirstOrDefault().CreateUser(newUser);
             Console.WriteLine(newUserId);
-            Configurator.SaveServiceState();
+            configurator.SaveServiceState();
 
             Console.ReadKey();
         }

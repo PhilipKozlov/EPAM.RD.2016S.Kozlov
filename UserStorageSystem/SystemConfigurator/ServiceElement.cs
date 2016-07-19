@@ -13,19 +13,35 @@ namespace SystemConfigurator
     public class ServiceElement : ConfigurationElement
     {
         #region Properties
+        ///// <summary>
+        ///// Gets or sets service type.
+        ///// </summary>
+        //[ConfigurationProperty("type", DefaultValue = "", IsKey = true, IsRequired = true)]
+        //public string Type
+        //{
+        //    get
+        //    {
+        //        return ((string)(base["type"]));
+        //    }
+        //    set
+        //    {
+        //        base["type"] = value;
+        //    }
+        //}
+
         /// <summary>
         /// Gets or sets service type.
         /// </summary>
-        [ConfigurationProperty("serviceType", DefaultValue = "", IsKey = true, IsRequired = true)]
-        public string ServiceType
+        [ConfigurationProperty("role", DefaultValue = "", IsKey = true, IsRequired = true)]
+        public string Role
         {
             get
             {
-                return ((string)(base["serviceType"]));
+                return ((string)(base["role"]));
             }
             set
             {
-                base["serviceType"] = value;
+                base["role"] = value;
             }
         }
 

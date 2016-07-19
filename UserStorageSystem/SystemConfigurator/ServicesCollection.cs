@@ -13,7 +13,7 @@ namespace SystemConfigurator
     public class ServicesCollection : ConfigurationElementCollection
     {
         /// <summary>
-        /// Gets seervice element based on specified index in collection.
+        /// Gets service element based on specified index in collection.
         /// </summary>
         /// <param name="i"> Element index.</param>
         /// <returns> ServiceElement instance.</returns>
@@ -42,7 +42,7 @@ namespace SystemConfigurator
         /// <returns> Element key.</returns>
         protected override object GetElementKey(ConfigurationElement element)
         {
-            return ((ServiceElement)(element)).ServiceType;
+            return ((ServiceElement)(element)).Role;
         }
         #endregion
     }

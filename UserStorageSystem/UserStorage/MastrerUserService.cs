@@ -144,7 +144,7 @@ namespace UserStorage
                 reader.ReadStartElement();
                 int.TryParse(reader.ReadElementString("Value"), out lastUserId);
                 reader.ReadEndElement();
-                var users = new XmlSerializer(userRepository.GetAll().GetType(), new XmlRootAttribute("Users")).Deserialize(reader) as List<User>;
+                var users = new XmlSerializer(userRepository.GetAll().GetType()/*, new XmlRootAttribute("Users")*/).Deserialize(reader) as List<User>;
                 InitRepository(users);
             }
             catch (XmlException ex)
@@ -167,7 +167,7 @@ namespace UserStorage
             writer.WriteStartElement("LastId");
             writer.WriteElementString("Value", lastUserId.ToString());
             writer.WriteEndElement();
-            new XmlSerializer(userRepository.GetAll().GetType(), new XmlRootAttribute("Users")).Serialize(writer, userRepository.GetAll());
+            new XmlSerializer(userRepository.GetAll().GetType()/*, new XmlRootAttribute("Users")*/).Serialize(writer, userRepository.GetAll());
             writer.WriteEndElement();
         }
 

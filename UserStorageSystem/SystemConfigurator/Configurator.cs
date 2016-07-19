@@ -10,16 +10,32 @@ using System.Reflection;
 using CompositionRoot;
 using System.Xml;
 using System.IO;
+using System.Xml.Serialization;
 
 namespace SystemConfigurator
 {
     /// <summary>
     /// Configures services.
     /// </summary>
-    public static class Configurator
+    public class Configurator
     {
         #region Fields
-        private static IMasterUserService masterService;
+        private IMasterUserService masterService;
+        private List<IUserService> services;
+        #endregion
+
+        #region Constructors
+        public Configurator()
+        {
+            services = new List<IUserService>();
+        }
+        #endregion
+
+        #region Properties
+        /// <summary>
+        /// Gets the collection of services.
+        /// </summary>
+        public IReadOnlyCollection<IUserService> Services => services;
         #endregion
 
         #region Public Methods
@@ -27,30 +43,14 @@ namespace SystemConfigurator
         /// Gets a collection of services.
         /// </summary>
         /// <returns> Collection of services.</returns>
-        public static List<IUserService> ConfigureServices()
+        public void ConfigurateServices()
         {
-            var kernel = new StandardKernel();
-            kernel.Load<Resolver>();
-
+            //Read config
             var serviceDict = new Dictionary<string, int>();
             ReadConfig(serviceDict);
             if (serviceDict["Master"] > 1 || serviceDict["Master"] < 0) throw new InvalidOperationException("Master service must be only one.");
             if (serviceDict["Slave"] < 0) throw new InvalidOperationException("Must have zero o more slave services.");
-
-            var services = new List<IUserService>();
-
-            // instantiate master
-            masterService = kernel.Get<IMasterUserService>();
-            services.Add(masterService);
-            LoadServiceState();
-
-            // instantiate slaves
-            for (int i = 0; i < serviceDict["Slave"]; i++)
-            {
-                var slaveService = kernel.Get<IUserService>();
-                services.Add(slaveService);
-            }
-            return services;
+            InstanciateServices(serviceDict);
         }
 
 
@@ -59,37 +59,63 @@ namespace SystemConfigurator
         /// </summary>
         /// <param name="masterService"> IMasterUserService instance.</param>
         /// <param name="filePath"> path to xml file.</param>
-        public static void SaveServiceState()
+        public void SaveServiceState()
         {
             var filePath = ConfigurationManager.AppSettings["Path"];
+            if (!File.Exists(filePath))
+            {
+                using (var myFile = File.Create(filePath)) ;
+            }
             using (var xmlWriter = XmlWriter.Create(filePath))
             {
-                (masterService as MastrerUserService).WriteXml(xmlWriter);
+                (masterService as IXmlSerializable)?.WriteXml(xmlWriter);
             }
         }
         #endregion
 
         #region Private Methods
 
-        private static void ReadConfig(Dictionary<string, int> serviceDict)
+        private void ReadConfig(Dictionary<string, int> serviceDict)
         {
             var section = (ServiceConfigSection)ConfigurationManager.GetSection("ServiceConfig");
             if (section != null)
             {
                 foreach (var si in section.ServiceItems)
                 {
-                    var type = (si as ServiceElement).ServiceType;
+                    var type = (si as ServiceElement).Role;
                     var number = Convert.ToInt32((si as ServiceElement).Number);
                     serviceDict.Add(type, number);
                 }
             }
         }
-        private static void LoadServiceState()
+
+        private void LoadServiceState()
         {
             var filePath = ConfigurationManager.AppSettings["Path"];
+            if (!File.Exists(filePath))
+            {
+                using (var myFile = File.Create(filePath)) ;
+            }
             using (var xmlReader = XmlReader.Create(filePath))
             {
-                (masterService as MastrerUserService).ReadXml(xmlReader);
+                (masterService as IXmlSerializable)?.ReadXml(xmlReader);
+            }
+        }
+
+        private void InstanciateServices(Dictionary<string, int> serviceDict)
+        {
+            // DI
+            var kernel = new StandardKernel();
+            kernel.Load<Resolver>();
+
+            // instanciate services
+            masterService = kernel.Get<IMasterUserService>();
+            services.Add(masterService);
+            LoadServiceState();
+            for (int i = 0; i < serviceDict["Slave"]; i++)
+            {
+                var slaveService = kernel.Get<IUserService>();
+                services.Add(slaveService);
             }
         }
         #endregion
