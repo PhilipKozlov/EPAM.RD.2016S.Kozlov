@@ -30,7 +30,7 @@ namespace Validator.Tests
         }
 
         [TestMethod]
-        public void IsValid_Null_ReturnFalse()
+        public void IsValid_NullUser_ReturnFalse()
         {
             var actual = validator.IsValid(null);
             Assert.IsFalse(actual);

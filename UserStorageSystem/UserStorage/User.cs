@@ -36,14 +36,14 @@ namespace UserStorage
         public string Name { get; set; }
 
         /// <summary>
-        /// User date of birth.
-        /// </summary>
-        public DateTime DateOfBirth { get; set; }
-
-        /// <summary>
         /// User last name.
         /// </summary>
         public string LastName { get; set; }
+
+        /// <summary>
+        /// User date of birth.
+        /// </summary>
+        public DateTime DateOfBirth { get; set; }
 
         /// <summary>
         /// User personal identificator.
@@ -87,7 +87,14 @@ namespace UserStorage
         /// <returns> A hash code for the current User.</returns>
         public override int GetHashCode()
         {
-            return Name.GetHashCode() * 17 + LastName.GetHashCode() + PersonalId.GetHashCode() + DateOfBirth.GetHashCode();
+            int? hash = 17;
+            hash = hash * 23 + Id.GetHashCode();
+            hash = hash * 23 + Name?.GetHashCode();
+            hash = hash * 23 + LastName?.GetHashCode();
+            hash = hash * 23 + DateOfBirth.GetHashCode();
+            hash = hash * 23 + PersonalId?.GetHashCode();
+            hash = hash * 23 + Gender.GetHashCode();
+            return hash.GetValueOrDefault();
         }
 
         /// <summary>

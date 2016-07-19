@@ -16,6 +16,6 @@ namespace IDGenerator
         /// </summary>
         /// <param name="prevId"> Previously generated id.</param>
         /// <returns> Id of type T.</returns>
-        T GenerateId(int prevId);
+        T GenerateId(T prevId);
     }
 }

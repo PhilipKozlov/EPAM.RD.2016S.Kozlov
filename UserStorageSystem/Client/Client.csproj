@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Ninject, Version=3.2.0.0, Culture=neutral, PublicKeyToken=c7192dc5380945e7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ninject.3.2.0.0\lib\net45-full\Ninject.dll</HintPath>
+      <HintPath>..\packages\Ninject.3.2.2.0\lib\net45-full\Ninject.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -59,10 +59,6 @@
     <ProjectReference Include="..\CompositionRoot\CompositionRoot.csproj">
       <Project>{4807fefb-ee6e-49da-b050-9162bbc7cf64}</Project>
       <Name>CompositionRoot</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\IDGenerator\IDGenerator.csproj">
-      <Project>{7a192c03-0f8f-4a5d-be00-8322a173df3d}</Project>
-      <Name>IDGenerator</Name>
     </ProjectReference>
     <ProjectReference Include="..\SystemConfigurator\SystemConfigurator.csproj">
       <Project>{089bbe2d-f5e5-49fd-8ef8-ba1e16344ad6}</Project>
