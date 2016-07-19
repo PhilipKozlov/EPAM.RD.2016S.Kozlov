@@ -9,6 +9,7 @@ namespace UserStorage
     /// <summary>
     /// Enumeration of possible user genders.
     /// </summary>
+    [Serializable]
     public enum Gender
     {
         /// <summary>

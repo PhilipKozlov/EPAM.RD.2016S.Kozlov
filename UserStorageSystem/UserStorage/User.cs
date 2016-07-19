@@ -9,6 +9,7 @@ namespace UserStorage
     /// <summary>
     /// Represents user entity.
     /// </summary>
+    [Serializable]
     public class User : IEquatable<User>
     {
         #region Constructors

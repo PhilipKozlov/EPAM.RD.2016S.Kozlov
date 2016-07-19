@@ -10,7 +10,7 @@ namespace UserStorage
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
-    public class SlaveUserService : IUserService
+    public class SlaveUserService : MarshalByRefObject, IUserService
     {
         #region Fields
         private readonly IUserRepository userRepository;
@@ -20,6 +20,12 @@ namespace UserStorage
         #endregion
 
         #region Constructors
+
+        /// <summary>
+        /// Instanciates SlaveUserService.
+        /// </summary>
+        public SlaveUserService() { }
+
         /// <summary>
         /// Instanciates SlaveUserService with specified parameters.
         /// </summary>

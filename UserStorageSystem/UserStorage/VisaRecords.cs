@@ -9,6 +9,7 @@ namespace UserStorage
     /// <summary>
     /// Contains Visa information.
     /// </summary>
+    [Serializable]
     public struct VisaRecord
     {
         /// <summary>
