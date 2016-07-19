@@ -14,7 +14,7 @@ namespace UserStorage
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
-    public class MastrerUserService : IMasterUserService, IXmlSerializable
+    public class MastrerUserService : MarshalByRefObject, IMasterUserService, IXmlSerializable
     {
         #region Fields
         private readonly IGenerator<int> idGenerator;
@@ -34,6 +34,11 @@ namespace UserStorage
         #endregion
 
         #region Constructors
+        /// <summary>
+        /// Instanciates MasterUserService.
+        /// </summary>
+        public MastrerUserService() { }
+
         /// <summary>
         /// Instanciates MasterUserService with specified parameter.
         /// </summary>

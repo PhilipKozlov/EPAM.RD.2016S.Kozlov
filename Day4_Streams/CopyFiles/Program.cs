@@ -19,11 +19,11 @@ namespace FileStreams
             string source = args[0];
             string destin = args[1];
 
-            //ByteCopy(source, destin);
-            //BlockCopy(source, destin); 
-            //LineCopy(source, destin);
-            MemoryBufferCopy(source, destin); // incorrect
-            //WebClient();
+            ByteCopy(source, destin);
+            BlockCopy(source, destin); 
+            LineCopy(source, destin);
+            MemoryBufferCopy(source, destin);
+            WebClient();
             Console.ReadKey();
         }
 
@@ -145,9 +145,12 @@ namespace FileStreams
                 {
                     bytesRead = stringReader.ReadBlock(buffer, 0, buffer.Length); // TODO: Read block from stringReader to buffer.
                     streamWriter.Write(buffer); // TODO: Write buffer to streamWriter.
-                       // TODO: After implementing everything check the content of NewTextFile. What's wrong with it, and how this may be fixed?
+                                                // TODO: After implementing everything check the content of NewTextFile. What's wrong with it, and how this may be fixed?
+
+                    streamWriter.Flush();
+                    memoryStream.Seek(0, SeekOrigin.Begin);
                     destinStream.Write(memoryStream.GetBuffer(), 0, bytesRead); // TODO: write memoryStream.GetBuffer() content to destination stream.
-                }
+                  }
                 while (bytesRead == blockSize);
             }
 

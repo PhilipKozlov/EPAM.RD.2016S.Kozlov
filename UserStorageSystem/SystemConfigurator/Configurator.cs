@@ -104,19 +104,24 @@ namespace SystemConfigurator
 
         private void InstanciateServices(Dictionary<string, int> serviceDict)
         {
-            // DI
-            var kernel = new StandardKernel();
-            kernel.Load<Resolver>();
 
-            // instanciate services
-            masterService = kernel.Get<IMasterUserService>();
+            masterService = CreateServiceInAppDomain<IMasterUserService>("MasterServiceDomain") as IMasterUserService;
             services.Add(masterService);
             LoadServiceState();
+
             for (int i = 0; i < serviceDict["Slave"]; i++)
             {
-                var slaveService = kernel.Get<IUserService>();
+                var slaveService = CreateServiceInAppDomain<IUserService>("SlaveServiceDomain") as IUserService;
                 services.Add(slaveService);
             }
+        }
+
+        private IUserService CreateServiceInAppDomain<TService>(string domainName) where TService : class, IUserService
+        {
+            var kernel = new StandardKernel();
+            kernel.Load<Resolver>();
+            var domain = AppDomain.CreateDomain(domainName);
+            return domain.CreateInstanceAndUnwrap(typeof(TService).Assembly.FullName, kernel.Get<TService>().GetType().FullName) as TService;
         }
         #endregion
     }
