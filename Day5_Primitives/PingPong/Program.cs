@@ -55,8 +55,9 @@ namespace PingPong
                     pingEvent.WaitOne();
                     
                     Thread.Sleep(1000);
-                    Console.WriteLine("pong!");
                     pongEvent.Set();
+                    Console.WriteLine("pong!");
+                    
 
                     // TODO: write ping-pong functionality here using pingEvent or pongEvent here.
 
