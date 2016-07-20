@@ -327,8 +327,8 @@ namespace UnitTestProject1
 
             var result = new[]
             {
-                new {name = "Max", Age = 19, Gender = Gender.Man, Salary = 19000, Info = "info about Max"},
-                new {name = "Alan", Age = 10, Gender = Gender.Man,Salary = 19000,Info = "About Alan"},
+                new {name = "Max", Age = 23, Gender = Gender.Man, Salary = 24000, Info = "info about Max"},
+                new {name = "Max", Age = 23, Gender = Gender.Man, Salary = 24000, Info = "info about Max"},
                 new {name = "Alex", Age = 45, Gender = Gender.Man,Salary = 54000,Info = "About Alex"}
             }.ToList();
 
@@ -338,9 +338,11 @@ namespace UnitTestProject1
 
             //ToDo Add code for second list
             actualData = userListSecond.Join(NameInfo, u=>u.Name, i=>i.name, (u,i)=> new { UserName = u.Name} ).Count();
-            var advancedActualData = userListSecond.Join(NameInfo, u => u.Name, i => i.name, (u, i) => new { UserName = u.Name, Age = u.Age, Gender = u.Gender, Salary = u.Salary, Info = i.Info });
+            var advancedActualData = userListSecond.Join(NameInfo, u => u.Name, i => i.name, (u, i) => new { UserName = u.Name, Age = u.Age, Gender = u.Gender, Salary = u.Salary, Info = i.Info }).ToList();
 
-            Assert.IsTrue(expectedData == actualData);
+            //CollectionAssert.AreEqual(result, advancedActualData);
+            Assert.IsTrue(advancedActualData.GetHashCode() == result.GetHashCode());
+            //Assert.IsTrue(expectedData == actualData);
         }
     }
 }
