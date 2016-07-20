@@ -27,9 +27,10 @@ namespace PingPong
                     Console.WriteLine("ping!");
 
                     // TODO: write ping-pong functionality here using pingEvent and pongEvent here.
-                    pingEvent.WaitOne();
+                    pingEvent.Set();
+                    pongEvent.WaitOne();
                     Thread.Sleep(1000);
-                    pongEvent.Set();
+                    
 
                     continueRunning = !cts.IsCancellationRequested; // TODO: Use cancellation token "token" internals here to set appropriate value.
                 }
@@ -48,13 +49,14 @@ namespace PingPong
 
                 while (continueRunning)
                 {
-                    Console.WriteLine("pong!");
+                    
 
                     // TODO: write ping-pong functionality here using pingEvent or pongEvent here.
-                    pingEvent.Set();
-                    pongEvent.WaitOne();
-                    Thread.Sleep(1000);
+                    pingEvent.WaitOne();
                     
+                    Thread.Sleep(1000);
+                    Console.WriteLine("pong!");
+                    pongEvent.Set();
 
                     // TODO: write ping-pong functionality here using pingEvent or pongEvent here.
 

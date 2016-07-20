@@ -30,6 +30,8 @@ namespace immutableValType
             Console.WriteLine(p);
             object o = p;
             Console.WriteLine(o);
+            //Point a = (Point)o;
+            //a.Change(3, 3);
             ((Point)o).Change(3, 3);
             Console.WriteLine(o);
             Console.ReadLine();
