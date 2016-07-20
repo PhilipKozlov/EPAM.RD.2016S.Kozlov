@@ -1,9 +1,13 @@
-﻿namespace Monitor
+﻿using System.Threading;
+
+namespace Monitor
 {
     // TODO: Use SpinLock to protect this structure.
     public class AnotherClass
     {
         private int _value;
+
+        private SpinLock sl = new SpinLock();
 
         public int Counter
         {
@@ -19,12 +23,34 @@
 
         public void Increase()
         {
-            _value++;
+            bool islockTaken = false;
+            try
+            {
+                sl.Enter(ref islockTaken);
+                _value++;
+            }
+            finally
+            {
+                if (islockTaken) sl.Exit(true);
+                islockTaken = false;
+            }
+            
         }
 
         public void Decrease()
         {
-            _value--;
+            bool islockTaken = false;
+            try
+            {
+                sl.Enter(ref islockTaken);
+                _value--;
+            }
+            finally
+            {
+                if (islockTaken) sl.Exit(true);
+                islockTaken = false;
+
+            }
         }
     }
 }

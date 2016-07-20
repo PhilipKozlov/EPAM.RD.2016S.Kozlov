@@ -27,7 +27,7 @@ namespace Monitor
                     }
                 };
 
-                Thread thread = null; // TODO: Create a new thread that will run the delegate above here.
+                Thread thread = new Thread(o => d()); // TODO: Create a new thread that will run the delegate above here.
 
                 threads[i] = thread;
             }
@@ -39,7 +39,7 @@ namespace Monitor
         {
             EventWaitHandle ewh;
 
-            ewh = null; // TODO: Choose between manual or auto reset events to synchronize threads.
+            ewh = new ManualResetEvent(false); // TODO: Choose between manual or auto reset events to synchronize threads.
 
             var myClass = new MyClass();
             var anClass = new AnotherClass();
@@ -52,6 +52,7 @@ namespace Monitor
             foreach (var thread in threads)
             {
                 // TODO: Start all the threads.
+                thread.Start();
             }
 
             Console.WriteLine("Press any key to run unblock working threads.");
@@ -63,6 +64,7 @@ namespace Monitor
             foreach (var thread in threads)
             {
                 // TODO: Wait unit all threads will finish their work.
+                ewh.WaitOne();
             }
 
             Console.WriteLine("MyClass.Counter is " + myClass.Counter);

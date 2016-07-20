@@ -5,6 +5,8 @@
     {
         private int _value;
 
+        private readonly object locker = new object();
+
         public int Counter
         {
             get
@@ -19,12 +21,28 @@
 
         public void Increase()
         {
-            _value++;
+            System.Threading.Monitor.Enter(locker);
+            try
+            {
+                _value++;
+            }
+            finally
+            {
+                System.Threading.Monitor.Exit(locker);
+            }
         }
 
         public void Decrease()
         {
-            _value--;
+            System.Threading.Monitor.Enter(locker);
+            try
+            {
+                _value--;
+            }
+            finally
+            {
+                System.Threading.Monitor.Exit(locker);
+            }
         }
     }
 }
