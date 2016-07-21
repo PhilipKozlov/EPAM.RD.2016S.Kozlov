@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,6 +19,9 @@ namespace UserStorage
         private readonly IMasterUserService masterService;
 
         private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
+
+        Socket listener;
+
         #endregion
 
         #region Constructors
@@ -24,7 +29,39 @@ namespace UserStorage
         /// <summary>
         /// Instanciates SlaveUserService.
         /// </summary>
-        public SlaveUserService() { }
+        public SlaveUserService()
+        {
+
+            //IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
+            //IPAddress ipAddress = ipHostInfo.AddressList[0];
+            //IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11000);
+
+            TcpListener tcpListener = null;
+            IPAddress ipAddress = Dns.GetHostEntry("localhost").AddressList[0];
+            try
+            {
+                tcpListener = new TcpListener(ipAddress, 13);
+                tcpListener.Start();
+            }
+            catch (Exception e)
+            {
+
+            }
+            while (true)
+            {
+
+                TcpClient tcpClient = tcpListener.AcceptTcpClient();
+                byte[] bytes = new byte[256];
+                NetworkStream stream = tcpClient.GetStream();
+                stream.Read(bytes, 0, bytes.Length);
+            }
+
+            //listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            //listener.Bind(localEndPoint);
+            //listener.Listen(100);
+
+
+        }
 
         /// <summary>
         /// Instanciates SlaveUserService with specified parameters.

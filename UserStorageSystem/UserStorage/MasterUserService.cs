@@ -9,6 +9,8 @@ using System.Xml;
 using System.Xml.Schema;
 using System.Diagnostics;
 using System.Threading;
+using System.Net.Sockets;
+using System.Net;
 
 namespace UserStorage
 {
@@ -27,6 +29,9 @@ namespace UserStorage
 
         private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
 
+
+        TcpClient client;
+
         #endregion
 
         #region Events
@@ -43,6 +48,24 @@ namespace UserStorage
         public MasterUserService()
         {
             slaveServices = new List<IUserService>();
+
+
+            // from config file
+            var port = 100;
+
+            // local end point
+            IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress ipAddress = ipHostInfo.AddressList[0];
+            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
+
+            // tcp client
+            client = new TcpClient(localEndPoint);
+
+
+
+            //Socket sender = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            //sender.Bind(localEndPoint);
+            //sender.Send();
         }
 
         /// <summary>
@@ -76,7 +99,16 @@ namespace UserStorage
             lastUserId = idGenerator.GenerateId(lastUserId);
             user.Id = lastUserId;
             userRepository.Create(user);
+
+            byte[] data = new byte[256];
+            data = Encoding.ASCII.GetBytes("message");
+            NetworkStream stream = client.GetStream();
+            stream.Write(data, 0, data.Length);
+
+
             OnStorageChanged(new StorageChangedEventArgs(user, added:true));
+
+
             return lastUserId;
         }
 
@@ -91,7 +123,11 @@ namespace UserStorage
                 Trace.TraceInformation("Delete user. {user.ToString()}");
             }
             userRepository.Delete(user);
+
+
             OnStorageChanged(new StorageChangedEventArgs(user, removed:true));
+
+
         }
 
         /// <summary>
