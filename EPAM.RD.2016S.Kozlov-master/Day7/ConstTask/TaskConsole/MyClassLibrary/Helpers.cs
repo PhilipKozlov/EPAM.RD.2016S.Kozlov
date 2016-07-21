@@ -2,6 +2,6 @@
 {
     public class Helpers
     {
-      public static readonly int WaitTime = 22;
+      public const int WaitTime = 19;
     }
 }

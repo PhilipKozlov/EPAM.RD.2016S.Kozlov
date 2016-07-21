@@ -2,9 +2,10 @@
 {
   public enum ImportantEnum
   {
-    White,
-    Red,    //0
-    Green,  //1
-    Orange  //2
+    Test = 0,
+    White = 1,
+    Red = 2,    //0
+    Green = 3,  //1
+    Orange = 4  //2
   }
 }
