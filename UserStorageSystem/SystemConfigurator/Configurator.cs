@@ -50,13 +50,10 @@ namespace SystemConfigurator
         public void ConfigurateServices()
         {
             //Read config
-            var serviceDict = new Dictionary<string, int>();
-            ReadConfig(serviceDict);
-            if (serviceDict["Master"] > 1 || serviceDict["Master"] < 0) throw new InvalidOperationException("Master service must be only one.");
-            if (serviceDict["Slave"] < 0) throw new InvalidOperationException("Must have zero o more slave services.");
-            InstanciateServices(serviceDict);
+            ConfigurateServicesHelper();
+            //var masterCount = services.Where(s => s.GetType() == typeof(IMasterUserService)).Count();
+            //if (masterCount > 1 || masterCount < 1) throw new InvalidOperationException("Master service must be only one.");
         }
-
 
         /// <summary>
         /// Saves master service state to xml file.
@@ -76,16 +73,27 @@ namespace SystemConfigurator
 
         #region Private Methods
 
-        private void ReadConfig(Dictionary<string, int> serviceDict)
+        private void ConfigurateServicesHelper()
         {
             var section = (ServiceConfigSection)ConfigurationManager.GetSection("ServiceConfig");
             if (section != null)
             {
+                var i = 0;
                 foreach (var si in section.ServiceItems)
                 {
-                    var type = (si as ServiceElement).Role;
-                    var number = Convert.ToInt32((si as ServiceElement).Number);
-                    serviceDict.Add(type, number);
+                    IUserService service = null;
+                    if ((si as ServiceElement).Role == "Master")
+                    {
+                        service = CreateMasterInAppDomain($"MasterServiceDomain{i}", (si as ServiceElement).Type);
+                        masterService = service as IMasterUserService;
+                        LoadServiceState();
+                    }
+                    if ((si as ServiceElement).Role == "Slave")
+                    {
+                        service = CreateSlaveInAppDomain($"SlaveServiceDomain{i}", (si as ServiceElement).Type);
+                    }
+                    services.Add(service);
+                    i++;
                 }
             }
         }
@@ -100,37 +108,32 @@ namespace SystemConfigurator
             (masterService as MasterUserService)?.ReadXml(filePath);
         }
 
-        private void InstanciateServices(Dictionary<string, int> serviceDict)
-        {
-            masterService = CreateMasterInAppDomain("MasterServiceDomain");
-            services.Add(masterService);
-            LoadServiceState();
-
-            for (int i = 0; i < serviceDict["Slave"]; i++)
-            {
-                var slaveService = CreateSlaveInAppDomain($"SlaveServiceDomain{i}");
-                services.Add(slaveService);
-            }
-        }
-
-        private IUserService CreateSlaveInAppDomain(string domainName)
+        private IUserService CreateSlaveInAppDomain(string domainName, string slaveType)
         {
             var domain = AppDomain.CreateDomain(domainName, null, null);
+            var typeToLoad = kernel.Get(Type.GetType(slaveType, true, false)).GetType().FullName;
+            var assemblyToLoad = Type.GetType(slaveType, true, false).Assembly.FullName;
+
+            // hardcode
             var repository = kernel.Get<IUserRepository>();
-            var typeToLoad = kernel.Get<IUserService>().GetType().FullName;
-            var assemblyToLoad = typeof(IUserService).Assembly.FullName;
+            //
+
             var service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { masterService, repository }, null, null) as IUserService;
             return service;
         }
 
-        private IMasterUserService CreateMasterInAppDomain(string domainName)
+        private IMasterUserService CreateMasterInAppDomain(string domainName, string masterType)
         {
             var domain = AppDomain.CreateDomain(domainName, null, null);
+            var typeToLoad = kernel.Get(Type.GetType(masterType, true, false)).GetType().FullName;
+            var assemblyToLoad = Type.GetType(masterType, true, false).Assembly.FullName;
+
+            // hardcode
             var repository = kernel.Get<IUserRepository>();
             var generator = kernel.Get<IGenerator<int>>();
             var validator = kernel.Get<IUserValidator>();
-            var typeToLoad = kernel.Get<IMasterUserService>().GetType().FullName;
-            var assemblyToLoad = typeof(IMasterUserService).Assembly.FullName;
+            //
+
             var service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository }, null, null) as IMasterUserService;
             return service;
         }
