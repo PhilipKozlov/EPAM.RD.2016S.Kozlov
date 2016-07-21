@@ -11,6 +11,7 @@ using CompositionRoot;
 using System.Xml;
 using System.IO;
 using System.Xml.Serialization;
+using IDGenerator;
 
 namespace SystemConfigurator
 {
@@ -22,12 +23,15 @@ namespace SystemConfigurator
         #region Fields
         private IMasterUserService masterService;
         private List<IUserService> services;
+        StandardKernel kernel;
         #endregion
 
         #region Constructors
         public Configurator()
         {
             services = new List<IUserService>();
+            kernel = new StandardKernel();
+            kernel.Load<Resolver>();
         }
         #endregion
 
@@ -64,12 +68,9 @@ namespace SystemConfigurator
             var filePath = ConfigurationManager.AppSettings["Path"];
             if (!File.Exists(filePath))
             {
-                using (var myFile = File.Create(filePath)) ;
+                using (var myFile = File.Create(filePath)) { };
             }
-            using (var xmlWriter = XmlWriter.Create(filePath))
-            {
-                (masterService as IXmlSerializable)?.WriteXml(xmlWriter);
-            }
+            (masterService as MasterUserService)?.WriteXml(filePath);
         }
         #endregion
 
@@ -94,34 +95,44 @@ namespace SystemConfigurator
             var filePath = ConfigurationManager.AppSettings["Path"];
             if (!File.Exists(filePath))
             {
-                using (var myFile = File.Create(filePath)) ;
+                using (var myFile = File.Create(filePath)) { };
             }
-            using (var xmlReader = XmlReader.Create(filePath))
-            {
-                (masterService as IXmlSerializable)?.ReadXml(xmlReader);
-            }
+            (masterService as MasterUserService)?.ReadXml(filePath);
         }
 
         private void InstanciateServices(Dictionary<string, int> serviceDict)
         {
-
-            masterService = CreateServiceInAppDomain<IMasterUserService>("MasterServiceDomain") as IMasterUserService;
+            masterService = CreateMasterInAppDomain("MasterServiceDomain");
             services.Add(masterService);
             LoadServiceState();
 
             for (int i = 0; i < serviceDict["Slave"]; i++)
             {
-                var slaveService = CreateServiceInAppDomain<IUserService>("SlaveServiceDomain") as IUserService;
+                var slaveService = CreateSlaveInAppDomain($"SlaveServiceDomain{i}");
                 services.Add(slaveService);
             }
         }
 
-        private IUserService CreateServiceInAppDomain<TService>(string domainName) where TService : class, IUserService
+        private IUserService CreateSlaveInAppDomain(string domainName)
         {
-            var kernel = new StandardKernel();
-            kernel.Load<Resolver>();
-            var domain = AppDomain.CreateDomain(domainName);
-            return domain.CreateInstanceAndUnwrap(typeof(TService).Assembly.FullName, kernel.Get<TService>().GetType().FullName) as TService;
+            var domain = AppDomain.CreateDomain(domainName, null, null);
+            var repository = kernel.Get<IUserRepository>();
+            var typeToLoad = kernel.Get<IUserService>().GetType().FullName;
+            var assemblyToLoad = typeof(IUserService).Assembly.FullName;
+            var service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { masterService, repository }, null, null) as IUserService;
+            return service;
+        }
+
+        private IMasterUserService CreateMasterInAppDomain(string domainName)
+        {
+            var domain = AppDomain.CreateDomain(domainName, null, null);
+            var repository = kernel.Get<IUserRepository>();
+            var generator = kernel.Get<IGenerator<int>>();
+            var validator = kernel.Get<IUserValidator>();
+            var typeToLoad = kernel.Get<IMasterUserService>().GetType().FullName;
+            var assemblyToLoad = typeof(IMasterUserService).Assembly.FullName;
+            var service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository }, null, null) as IMasterUserService;
+            return service;
         }
         #endregion
     }

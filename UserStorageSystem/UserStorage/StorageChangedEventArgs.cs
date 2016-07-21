@@ -9,6 +9,7 @@ namespace UserStorage
     /// <summary>
     /// Represents storage changed event data.
     /// </summary>
+    [Serializable]
     public sealed class StorageChangedEventArgs : EventArgs
     {
         #region Fields

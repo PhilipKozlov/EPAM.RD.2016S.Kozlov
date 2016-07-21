@@ -66,7 +66,7 @@ namespace UserStorage
             {
                 Trace.TraceInformation($"Find user by name = {name}.");
             }
-            return userRepository.Find(u => u.Name == name).Select(u => u.Id);
+            return userRepository.Find(u => u.Name == name).Select(u => u.Id).ToList();
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace UserStorage
             {
                 Trace.TraceInformation($"Find user by name and last name, name = {name}, last name = {lastName}.");
             }
-            return userRepository.Find(u => u.Name == name && u.LastName == lastName).Select(u => u.Id);
+            return userRepository.Find(u => u.Name == name && u.LastName == lastName).Select(u => u.Id).ToList();
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace UserStorage
             {
                 Trace.TraceInformation($"Find user by personalId, personalId = {personalId}.");
             }
-            return userRepository.Find(u => u.PersonalId == personalId).Select(u => u.Id);
+            return userRepository.Find(u => u.PersonalId == personalId).Select(u => u.Id).ToList();
         }
         #endregion
 

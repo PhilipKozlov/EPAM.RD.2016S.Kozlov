@@ -25,7 +25,7 @@ namespace UserStorage.Tests
         [ExpectedException(typeof(NotSupportedException))]
         public void CreateUser_NewUser_NotSupportedException()
         {
-            var masterUserService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var masterUserService = new MasterUserService(idGenerator, userValidator, userRepository);
             var userService = new SlaveUserService(masterUserService, userRepository);
             var actual = userService.CreateUser(new User());
         }
@@ -34,7 +34,7 @@ namespace UserStorage.Tests
         [ExpectedException(typeof(NotSupportedException))]
         public void DeleteUser_User_NotSupportedException()
         {
-            var masterUserService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var masterUserService = new MasterUserService(idGenerator, userValidator, userRepository);
             var userService = new SlaveUserService(masterUserService, userRepository);
             userService.DeleteUser(new User());
         }
@@ -42,7 +42,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByName_John_ReturnIEnumerableOfOneUser()
         {
-            var masterUserService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var masterUserService = new MasterUserService(idGenerator, userValidator, userRepository);
             var userService = new SlaveUserService(masterUserService, slaveRepository);
             var user = new User()
             {
@@ -58,7 +58,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByNameAndLastName_JohnDoe_ReturnIEnumerableOfOneUser()
         {
-            var masterUserService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var masterUserService = new MasterUserService(idGenerator, userValidator, userRepository);
             var userService = new SlaveUserService(masterUserService, slaveRepository);
             var user = new User()
             {
@@ -74,7 +74,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByPersonalId_12345678901234_ReturnIEnumerableOfOneUser()
         {
-            var masterUserService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var masterUserService = new MasterUserService(idGenerator, userValidator, userRepository);
             var userService = new SlaveUserService(masterUserService, slaveRepository);
             var user = new User()
             {

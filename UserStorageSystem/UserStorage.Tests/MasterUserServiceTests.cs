@@ -20,7 +20,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void CreateUser_NewUser_ReturnOne()
         {
-            var userService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var userService = new MasterUserService(idGenerator, userValidator, userRepository);
             var user = new User()
             {
                 Name = "John",
@@ -35,7 +35,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByName_John_ReturnIEnumerableOfOneUser()
         {
-            var userService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var userService = new MasterUserService(idGenerator, userValidator, userRepository);
             var user = new User()
             {
                 Name = "John",
@@ -50,7 +50,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByNameAndLastName_JohnDoe_ReturnIEnumerableOfOneUser()
         {
-            var userService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var userService = new MasterUserService(idGenerator, userValidator, userRepository);
             var user = new User()
             {
                 Name = "John",
@@ -65,7 +65,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByPersonalId_12345678901234_ReturnIEnumerableOfOneUser()
         {
-            var userService = new MastrerUserService(idGenerator, userValidator, userRepository);
+            var userService = new MasterUserService(idGenerator, userValidator, userRepository);
             var user = new User()
             {
                 Name = "John",

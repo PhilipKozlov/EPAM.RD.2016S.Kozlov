@@ -56,6 +56,10 @@
       <Project>{4807fefb-ee6e-49da-b050-9162bbc7cf64}</Project>
       <Name>CompositionRoot</Name>
     </ProjectReference>
+    <ProjectReference Include="..\IDGenerator\IDGenerator.csproj">
+      <Project>{7A192C03-0F8F-4A5D-BE00-8322A173DF3D}</Project>
+      <Name>IDGenerator</Name>
+    </ProjectReference>
     <ProjectReference Include="..\UserStorage\UserStorage.csproj">
       <Project>{a9dbba89-cecb-4a7a-b257-41e68eccc2aa}</Project>
       <Name>UserStorage</Name>

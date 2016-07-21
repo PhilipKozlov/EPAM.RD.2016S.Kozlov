@@ -10,6 +10,7 @@ namespace Validator
     /// <summary>
     /// Provides functionality for validating User entities.
     /// </summary>
+    [Serializable]
     public class UserValidator : IUserValidator
     {
         #region Public Methods

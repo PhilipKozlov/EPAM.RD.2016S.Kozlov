@@ -11,6 +11,7 @@ namespace DAL
     /// <summary>
     /// Represents common functionality for accessing user storage.
     /// </summary>
+    [Serializable]
     public class InMemoryUserRepository : IUserRepository
     {
         #region Fields

@@ -9,6 +9,7 @@ namespace IDGenerator
     /// <summary>
     /// Provides methods for generating prime numbers.
     /// </summary>
+    [Serializable]
     public class PrimeGenerator : IGenerator<int>
     {
         #region IGenerator methods
