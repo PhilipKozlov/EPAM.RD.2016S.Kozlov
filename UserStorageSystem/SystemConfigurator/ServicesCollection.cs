@@ -10,6 +10,7 @@ namespace SystemConfigurator
     /// <summary>
     /// Represents a configuration element containing a collection of service elements.
     /// </summary>
+    [ConfigurationCollection(typeof(ServiceElement), AddItemName = "Service")]
     public class ServicesCollection : ConfigurationElementCollection
     {
         /// <summary>
