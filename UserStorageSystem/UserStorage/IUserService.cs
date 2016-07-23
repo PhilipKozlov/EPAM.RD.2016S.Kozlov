@@ -3,14 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace UserStorage
 {
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
-    public interface IUserService
+    public interface IUserService : IXmlSerializable
     {
+        /// <summary>
+        /// Gets or sets weather this service is master.
+        /// </summary>
+        bool IsMaster { get; set; }
         /// <summary>
         /// Creates a new user.
         /// </summary>

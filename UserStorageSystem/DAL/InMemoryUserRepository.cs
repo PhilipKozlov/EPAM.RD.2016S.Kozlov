@@ -4,7 +4,10 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using UserStorage;
+using System.Threading;
+using System.Runtime.Serialization;
 
 namespace DAL
 {
@@ -12,11 +15,20 @@ namespace DAL
     /// Represents common functionality for accessing user storage.
     /// </summary>
     [Serializable]
-    public class InMemoryUserRepository : IUserRepository
+    public class InMemoryUserRepository : IUserRepository, IDisposable
     {
         #region Fields
-        private List<User> Users { get; set; }
+        private  List<User> Users { get; set; }
+        [NonSerialized]
+        private ReaderWriterLockSlim locker;
         #endregion
+
+
+        [OnDeserialized]
+        private void OnDeserialized(StreamingContext context)
+        {
+            locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
+        }
 
         #region Constructors
         /// <summary>
@@ -24,6 +36,7 @@ namespace DAL
         /// </summary>
         public InMemoryUserRepository()
         {
+            locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
             Users = new List<User>();
         }
         #endregion
@@ -35,7 +48,10 @@ namespace DAL
         /// <returns></returns>
         public IList<User> GetAll()
         {
-            return Users;
+            locker.EnterReadLock();
+            var users = Users;
+            locker.ExitReadLock();
+            return users;
         }
 
         /// <summary>
@@ -44,7 +60,9 @@ namespace DAL
         /// <param name="user"> User instance.</param>
         public void Create(User user)
         {
+            locker.EnterWriteLock();
             Users.Add(user);
+            locker.ExitWriteLock();
         }
         /// <summary>
         /// Deletes user from storage.
@@ -52,7 +70,9 @@ namespace DAL
         /// <param name="user"> User instance.</param>
         public void Delete(User user)
         {
+            locker.EnterWriteLock();
             Users.Remove(user);
+            locker.ExitWriteLock();
         }
         /// <summary>
         /// Performs a search for user using specified filter.
@@ -62,7 +82,15 @@ namespace DAL
         public IEnumerable<User> Find(Expression<Func<User, bool>> filter)
         {
             if (filter == null) throw new ArgumentNullException(nameof(filter));
-            return Users.Where(filter.Compile());
+            locker.EnterReadLock();
+            var users = Users.Where(filter.Compile());
+            locker.ExitReadLock();
+            return users;
+        }
+
+        public void Dispose()
+        {
+            locker.Dispose();
         }
         #endregion
     }

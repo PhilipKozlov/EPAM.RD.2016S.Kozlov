@@ -41,14 +41,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Gender.cs" />
-    <Compile Include="IMasterUserService.cs" />
     <Compile Include="IUserRepository.cs" />
     <Compile Include="IUserService.cs" />
     <Compile Include="IUserValidator.cs" />
-    <Compile Include="MasterUserService.cs" />
+    <Compile Include="UserService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ProxyUserService.cs" />
-    <Compile Include="SlaveUserService.cs" />
+    <Compile Include="ProxyService.cs" />
     <Compile Include="StorageChangedEventArgs.cs" />
     <Compile Include="StorageChangedMessage.cs" />
     <Compile Include="User.cs" />

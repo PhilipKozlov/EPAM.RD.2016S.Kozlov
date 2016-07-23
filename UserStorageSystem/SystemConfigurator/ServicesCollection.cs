@@ -11,8 +11,9 @@ namespace SystemConfigurator
     /// Represents a configuration element containing a collection of service elements.
     /// </summary>
     [ConfigurationCollection(typeof(ServiceElement), AddItemName = "Service")]
-    public class ServicesCollection : ConfigurationElementCollection
+    internal class ServicesCollection : ConfigurationElementCollection
     {
+        #region Properties
         /// <summary>
         /// Gets service element based on specified index in collection.
         /// </summary>
@@ -25,6 +26,7 @@ namespace SystemConfigurator
                 return (ServiceElement)BaseGet(i);
             }
         }
+        #endregion
 
         #region ConfigurationElementCollection Methods
         /// <summary>

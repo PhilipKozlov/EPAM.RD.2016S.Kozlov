@@ -11,13 +11,15 @@ using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
 using System.Net;
+using System.Runtime.Serialization;
 
 namespace UserStorage
 {
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
-    public class MasterUserService : MarshalByRefObject, IMasterUserService
+    [Serializable]
+    public class UserService : MarshalByRefObject, IUserService
     {
         #region Fields
         private readonly IGenerator<int> idGenerator;
@@ -30,7 +32,7 @@ namespace UserStorage
         private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
 
 
-        TcpClient client;
+        IUserService service;
 
         #endregion
 
@@ -45,27 +47,9 @@ namespace UserStorage
         /// <summary>
         /// Instanciates MasterUserService.
         /// </summary>
-        public MasterUserService()
+        public UserService()
         {
             slaveServices = new List<IUserService>();
-
-
-            // from config file
-            var port = 100;
-
-            // local end point
-            IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-            IPAddress ipAddress = ipHostInfo.AddressList[0];
-            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
-
-            // tcp client
-            client = new TcpClient(localEndPoint);
-
-
-
-            //Socket sender = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            //sender.Bind(localEndPoint);
-            //sender.Send();
         }
 
         /// <summary>
@@ -74,12 +58,28 @@ namespace UserStorage
         /// <param name="idGenerator"> IGenerator` instance.</param>
         /// <param name="userValidator"> UserValidator instance.</param>
         /// <param name="userRepository"> UserRepository instance.</param>
-        public MasterUserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository) : this()
+        public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository) : this()
         {
             this.idGenerator = idGenerator;
             this.userValidator = userValidator;
             this.userRepository = userRepository;
         }
+
+        // SLAVE .CTOR.
+        public UserService(IUserService masterService, IUserRepository userRepository)
+        {
+            service = masterService;
+            this.userRepository = userRepository;
+
+            (service as UserService).StorageChanged += OnStorageChanged;
+        }
+        #endregion
+
+        #region Properties
+        /// <summary>
+        /// Gets or sets weather this service is master.
+        /// </summary>
+        public bool IsMaster { get; set; }
         #endregion
 
         #region IUserService Methods
@@ -90,6 +90,7 @@ namespace UserStorage
         /// <returns> Id generated for a new user.</returns>
         public int CreateUser(User user)
         {
+            if (!IsMaster) throw new NotSupportedException();
             if (boolSwitch.Enabled)
             {
                 Trace.TraceInformation($"Create user. {user.ToString()}");
@@ -99,11 +100,6 @@ namespace UserStorage
             lastUserId = idGenerator.GenerateId(lastUserId);
             user.Id = lastUserId;
             userRepository.Create(user);
-
-            byte[] data = new byte[256];
-            data = Encoding.ASCII.GetBytes("message");
-            NetworkStream stream = client.GetStream();
-            stream.Write(data, 0, data.Length);
 
 
             OnStorageChanged(new StorageChangedEventArgs(user, added:true));
@@ -118,6 +114,7 @@ namespace UserStorage
         /// <param name="user"> user instance.</param>
         public void DeleteUser(User user)
         {
+            if (!IsMaster) throw new NotSupportedException();
             if (boolSwitch.Enabled)
             {
                 Trace.TraceInformation("Delete user. {user.ToString()}");
@@ -180,28 +177,34 @@ namespace UserStorage
         /// Generates an object from its XML representation.
         /// </summary>
         /// <param name="filePath"> The path to the xml file.</param>
-        public void ReadXml(string filePath)
+        public void ReadXml(XmlReader xmlReader)
         {
-            using (var xmlReader = XmlReader.Create(filePath))
+            if (!IsMaster) throw new NotSupportedException();
+            try
             {
-
-                try
+                xmlReader.MoveToContent();
+                xmlReader.ReadStartElement();
+                xmlReader.ReadStartElement();
+                int.TryParse(xmlReader.ReadElementString("Value"), out lastUserId);
+                xmlReader.ReadEndElement();
+                var users = new XmlSerializer(userRepository.GetAll().GetType()/*, new XmlRootAttribute("Users")*/).Deserialize(xmlReader) as List<User>;
+                InitRepository(users);
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (boolSwitch.Enabled)
                 {
-                    xmlReader.MoveToContent();
-                    xmlReader.ReadStartElement();
-                    xmlReader.ReadStartElement();
-                    int.TryParse(xmlReader.ReadElementString("Value"), out lastUserId);
-                    xmlReader.ReadEndElement();
-                    var users = new XmlSerializer(userRepository.GetAll().GetType()/*, new XmlRootAttribute("Users")*/).Deserialize(xmlReader) as List<User>;
-                    InitRepository(users);
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
                 }
-                catch (XmlException ex)
+                throw;
+            }
+            catch (XmlException ex)
+            {
+                if (boolSwitch.Enabled)
                 {
-                    if (boolSwitch.Enabled)
-                    {
-                        Trace.TraceError($"Empty xml - file.", ex);
-                    }
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
                 }
+                throw;
             }
         }
 
@@ -209,9 +212,10 @@ namespace UserStorage
         /// Converts an object into its XML representation.
         /// </summary>
         /// <param name="filePath"> The path to the xml file.</param>
-        public void WriteXml(string filePath)
+        public void WriteXml(XmlWriter xmlWriter)
         {
-            using (var xmlWriter = XmlWriter.Create(filePath))
+            if (!IsMaster) throw new NotSupportedException();
+            try
             {
                 xmlWriter.WriteStartDocument();
                 xmlWriter.WriteStartElement("ServiceState");
@@ -220,6 +224,22 @@ namespace UserStorage
                 xmlWriter.WriteEndElement();
                 new XmlSerializer(userRepository.GetAll().GetType()/*, new XmlRootAttribute("Users")*/).Serialize(xmlWriter, userRepository.GetAll());
                 xmlWriter.WriteEndElement();
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (boolSwitch.Enabled)
+                {
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                }
+                throw;
+            }
+            catch (EncoderFallbackException ex)
+            {
+                if (boolSwitch.Enabled)
+                {
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                }
+                throw;
             }
         }
 
@@ -235,6 +255,13 @@ namespace UserStorage
             StorageChanged.Invoke(this, e);
         }
 
+        private void OnStorageChanged(object sender, StorageChangedEventArgs e)
+        {
+            var user = e.User;
+            if (e.IsAdded) userRepository.GetAll().Add(e.User);
+            if (e.IsRemoved) userRepository.GetAll().Remove(e.User);
+        }
+
         #endregion
 
         #region Private Methods
@@ -245,6 +272,8 @@ namespace UserStorage
                 userRepository.Create(u);
             }
         }
+
+        XmlSchema IXmlSerializable.GetSchema() => null;
         #endregion
     }
 }

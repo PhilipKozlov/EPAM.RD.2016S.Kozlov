@@ -12,6 +12,7 @@ namespace UserStorage
     [Serializable]
     public struct VisaRecord
     {
+        #region Properties
         /// <summary>
         /// Country for visa.
         /// </summary>
@@ -26,5 +27,6 @@ namespace UserStorage
         /// Visa end date.
         /// </summary>
         public DateTime End { get; set; }
+        #endregion
     }
 }

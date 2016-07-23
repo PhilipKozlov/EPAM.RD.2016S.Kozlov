@@ -10,7 +10,7 @@ using System.Linq;
 namespace UserStorage.Tests
 {
     [TestClass]
-    public class MasterUserServiceTests
+    public class UserServiceTests
     {
         private IUserRepository userRepository = new InMemoryUserRepository();
         private IGenerator<int> idGenerator = new PrimeGenerator();
@@ -20,7 +20,8 @@ namespace UserStorage.Tests
         [TestMethod]
         public void CreateUser_NewUser_ReturnOne()
         {
-            var userService = new MasterUserService(idGenerator, userValidator, userRepository);
+            var userService = new UserService(idGenerator, userValidator, userRepository);
+            userService.IsMaster = true;
             var user = new User()
             {
                 Name = "John",
@@ -35,7 +36,8 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByName_John_ReturnIEnumerableOfOneUser()
         {
-            var userService = new MasterUserService(idGenerator, userValidator, userRepository);
+            var userService = new UserService(idGenerator, userValidator, userRepository);
+            userService.IsMaster = true;
             var user = new User()
             {
                 Name = "John",
@@ -50,7 +52,8 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByNameAndLastName_JohnDoe_ReturnIEnumerableOfOneUser()
         {
-            var userService = new MasterUserService(idGenerator, userValidator, userRepository);
+            var userService = new UserService(idGenerator, userValidator, userRepository);
+            userService.IsMaster = true;
             var user = new User()
             {
                 Name = "John",
@@ -65,7 +68,8 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByPersonalId_12345678901234_ReturnIEnumerableOfOneUser()
         {
-            var userService = new MasterUserService(idGenerator, userValidator, userRepository);
+            var userService = new UserService(idGenerator, userValidator, userRepository);
+            userService.IsMaster = true;
             var user = new User()
             {
                 Name = "John",
@@ -75,6 +79,24 @@ namespace UserStorage.Tests
             userService.CreateUser(user);
             var expected = userService.FindByPersonalId("12345678901234");
             Assert.AreEqual(expected.ElementAt(0), user.Id);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(NotSupportedException))]
+        public void CreateUser_NewUser_NotSupportedException()
+        {
+            var masterUserService = new UserService(idGenerator, userValidator, userRepository);
+            var userService = new UserService(masterUserService, userRepository);
+            var actual = userService.CreateUser(new User());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(NotSupportedException))]
+        public void DeleteUser_User_NotSupportedException()
+        {
+            var masterUserService = new UserService(idGenerator, userValidator, userRepository);
+            var userService = new UserService(masterUserService, userRepository);
+            userService.DeleteUser(new User());
         }
 
     }

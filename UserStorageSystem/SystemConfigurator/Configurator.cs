@@ -12,34 +12,27 @@ using System.Xml;
 using System.IO;
 using System.Xml.Serialization;
 using IDGenerator;
+using System.Diagnostics;
 
 namespace SystemConfigurator
 {
     /// <summary>
     /// Configures services.
     /// </summary>
-    public class Configurator
+    public static class Configurator
     {
         #region Fields
-        private IMasterUserService masterService;
-        private List<IUserService> services;
-        StandardKernel kernel;
+        private static IUserService masterService;
+        private static readonly StandardKernel kernel;
+        private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
         #endregion
 
-        #region Constructors
-        public Configurator()
+        #region Type Initializer
+        static Configurator()
         {
-            services = new List<IUserService>();
             kernel = new StandardKernel();
             kernel.Load<Resolver>();
         }
-        #endregion
-
-        #region Properties
-        /// <summary>
-        /// Gets the collection of services.
-        /// </summary>
-        public IReadOnlyCollection<IUserService> Services => services;
         #endregion
 
         #region Public Methods
@@ -47,34 +40,11 @@ namespace SystemConfigurator
         /// Gets a collection of services.
         /// </summary>
         /// <returns> Collection of services.</returns>
-        public void ConfigurateServices()
+        public static ProxyService ConfigurateServices()
         {
-            //Read config
-            ConfigurateServicesHelper();
-            //var masterCount = services.Where(s => s.GetType() == typeof(IMasterUserService)).Count();
-            //if (masterCount > 1 || masterCount < 1) throw new InvalidOperationException("Master service must be only one.");
-        }
-
-        /// <summary>
-        /// Saves master service state to xml file.
-        /// </summary>
-        /// <param name="masterService"> IMasterUserService instance.</param>
-        /// <param name="filePath"> path to xml file.</param>
-        public void SaveServiceState()
-        {
-            var filePath = ConfigurationManager.AppSettings["Path"];
-            if (!File.Exists(filePath))
-            {
-                using (var myFile = File.Create(filePath)) { };
-            }
-            (masterService as MasterUserService)?.WriteXml(filePath);
-        }
-        #endregion
-
-        #region Private Methods
-
-        private void ConfigurateServicesHelper()
-        {
+            // TODO : Add master/slave related exceptions.
+            
+            var services = new List<IUserService>();
             var section = (ServiceConfigSection)ConfigurationManager.GetSection("ServiceConfig");
             if (section != null)
             {
@@ -84,59 +54,123 @@ namespace SystemConfigurator
                     IUserService service = null;
                     if ((si as ServiceElement).Role == "Master")
                     {
-                        service = CreateMasterInAppDomain($"MasterServiceDomain{i}", (si as ServiceElement).Type);
-                        masterService = service as IMasterUserService;
+                        service = kernel.Get(Type.GetType((si as ServiceElement).Type, true, false)) as IUserService;
+                        //service = CreateMasterInAppDomain($"MasterServiceDomain{i}", (si as ServiceElement).Type);
+                        masterService = service;
+                        masterService.IsMaster = true;
                         LoadServiceState();
                     }
                     if ((si as ServiceElement).Role == "Slave")
                     {
-                        service = CreateSlaveInAppDomain($"SlaveServiceDomain{i}", (si as ServiceElement).Type);
+                        service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", (si as ServiceElement).Type);
                     }
                     services.Add(service);
                     i++;
                 }
             }
+
+            return new ProxyService(services);
+
         }
 
-        private void LoadServiceState()
+        /// <summary>
+        /// Saves master service state to xml file.
+        /// </summary>
+        /// <param name="masterService"> IMasterUserService instance.</param>
+        /// <param name="filePath"> path to xml file.</param>
+        public static void SaveServiceState()
         {
             var filePath = ConfigurationManager.AppSettings["Path"];
             if (!File.Exists(filePath))
             {
                 using (var myFile = File.Create(filePath)) { };
             }
-            (masterService as MasterUserService)?.ReadXml(filePath);
+            using (var xmlWriter = XmlWriter.Create(filePath))
+            {
+                masterService.WriteXml(xmlWriter);
+            }
+        }
+        #endregion
+
+        #region Private Methods
+
+        private static void LoadServiceState()
+        {
+            var filePath = ConfigurationManager.AppSettings["Path"];
+            if (!File.Exists(filePath))
+            {
+                using (var myFile = File.Create(filePath)) { };
+            }
+            using (var xmlReader = XmlReader.Create(filePath))
+            {
+                masterService.ReadXml(xmlReader);
+            }
         }
 
-        private IUserService CreateSlaveInAppDomain(string domainName, string slaveType)
+        private static IUserService CreateServiceInAppDomain(string domainName, string slaveType)
         {
             var domain = AppDomain.CreateDomain(domainName, null, null);
             var typeToLoad = kernel.Get(Type.GetType(slaveType, true, false)).GetType().FullName;
-            var assemblyToLoad = Type.GetType(slaveType, true, false).Assembly.FullName;
+            string assemblyToLoad;
 
             // hardcode
             var repository = kernel.Get<IUserRepository>();
             //
+            IUserService service;
+            try
+            {
+                assemblyToLoad = Type.GetType(slaveType, true, false).Assembly.FullName;
+                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { masterService, repository }, null, null) as IUserService;
+            }
+            catch (TypeLoadException ex)
+            {
+                if (boolSwitch.Enabled)
+                {
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                }
+                throw;
+            }
+            catch (FileLoadException ex)
+            {
+                if (boolSwitch.Enabled)
+                {
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (boolSwitch.Enabled)
+                {
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                }
+                throw;
+            }
 
-            var service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { masterService, repository }, null, null) as IUserService;
             return service;
         }
 
-        private IMasterUserService CreateMasterInAppDomain(string domainName, string masterType)
-        {
-            var domain = AppDomain.CreateDomain(domainName, null, null);
-            var typeToLoad = kernel.Get(Type.GetType(masterType, true, false)).GetType().FullName;
-            var assemblyToLoad = Type.GetType(masterType, true, false).Assembly.FullName;
+        //private static IUserService CreateMasterInAppDomain(string domainName, string masterType)
+        //{
+        //    var domain = AppDomain.CreateDomain(domainName, null, null);
+        //    var typeToLoad = kernel.Get(Type.GetType(masterType, true, false)).GetType().FullName;
+        //    string assemblyToLoad;
 
-            // hardcode
-            var repository = kernel.Get<IUserRepository>();
-            var generator = kernel.Get<IGenerator<int>>();
-            var validator = kernel.Get<IUserValidator>();
-            //
+        //    // hardcode
+        //    var repository = kernel.Get<IUserRepository>();
+        //    var generator = kernel.Get<IGenerator<int>>();
+        //    var validator = kernel.Get<IUserValidator>();
+        //    //
 
-            var service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository }, null, null) as IMasterUserService;
-            return service;
-        }
+        //    IUserService service;
+        //    try
+        //    {
+        //        assemblyToLoad = Type.GetType(masterType, true, false).Assembly.FullName;
+        //        service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository }, null, null) as IUserService;
+        //    }
+
+        //    return service;
+        //}
         #endregion
     }
 }

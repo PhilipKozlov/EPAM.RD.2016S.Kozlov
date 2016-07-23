@@ -35,8 +35,7 @@ namespace CompositionRoot
 
         private void LoadBll()
         {
-            Bind<IUserService>().To<SlaveUserService>().InTransientScope();
-            Bind<IMasterUserService>().To<MasterUserService>().InSingletonScope();
+            Bind<IUserService>().To<UserService>().InTransientScope();
             Bind<IUserValidator>().To<UserValidator>().InTransientScope();
             Bind<IGenerator<int>>().To<PrimeGenerator>().InSingletonScope();
         }

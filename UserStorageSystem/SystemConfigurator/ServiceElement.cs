@@ -10,7 +10,7 @@ namespace SystemConfigurator
     /// <summary>
     /// Represents a service configuration element within a configuration file.
     /// </summary>
-    public class ServiceElement : ConfigurationElement
+    internal class ServiceElement : ConfigurationElement
     {
         #region Properties
         /// <summary>

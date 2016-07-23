@@ -12,9 +12,8 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            var configurator = new Configurator();
-            configurator.ConfigurateServices();
-            var user = configurator.Services.FirstOrDefault().FindByNameAndLastName("Jane", "Doe");
+            var proxy = Configurator.ConfigurateServices();
+            var user = proxy.FindByNameAndLastName("Jane", "Doe");
             Console.WriteLine(user.FirstOrDefault());
 
             var newUser = new User
@@ -26,11 +25,12 @@ namespace Client
                 Gender = Gender.Male
             };
 
-            var newUserId = configurator.Services.FirstOrDefault().CreateUser(newUser);
+            var newUserId = proxy.CreateUser(newUser);
             Console.WriteLine(newUserId);
-            configurator.SaveServiceState();
 
             Console.ReadKey();
+
+            Configurator.SaveServiceState();
         }
     }
 }
