@@ -105,7 +105,7 @@ namespace UserStorage
         /// <returns> True if the specified User is equal to the User object; otherwise, false.</returns>
         public bool Equals(User other)
         {
-            if (other.Name == Name && other.LastName == LastName && other.DateOfBirth == DateOfBirth) return true;
+            if (other.Name == Name && other.LastName == LastName) return true;
             return false;
         }
         #endregion

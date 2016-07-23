@@ -58,7 +58,6 @@ namespace SystemConfigurator
                         //service = CreateMasterInAppDomain($"MasterServiceDomain{i}", (si as ServiceElement).Type);
                         masterService = service;
                         masterService.IsMaster = true;
-                        LoadServiceState();
                     }
                     if ((si as ServiceElement).Role == "Slave")
                     {
@@ -67,6 +66,7 @@ namespace SystemConfigurator
                     services.Add(service);
                     i++;
                 }
+                LoadServiceState();
             }
 
             return new ProxyService(services);

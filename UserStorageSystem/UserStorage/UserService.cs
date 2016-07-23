@@ -188,7 +188,7 @@ namespace UserStorage
                 int.TryParse(xmlReader.ReadElementString("Value"), out lastUserId);
                 xmlReader.ReadEndElement();
                 var users = new XmlSerializer(userRepository.GetAll().GetType()/*, new XmlRootAttribute("Users")*/).Deserialize(xmlReader) as List<User>;
-                InitRepository(users);
+                InitUsers(users);
             }
             catch (InvalidOperationException ex)
             {
@@ -265,11 +265,11 @@ namespace UserStorage
         #endregion
 
         #region Private Methods
-        private void InitRepository(List<User> users)
+        private void InitUsers(List<User> users)
         {
             foreach (var u in users)
             {
-                userRepository.Create(u);
+                CreateUser(u);
             }
         }
 
