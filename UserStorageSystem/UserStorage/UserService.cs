@@ -12,13 +12,14 @@ using System.Threading;
 using System.Net.Sockets;
 using System.Net;
 using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 namespace UserStorage
 {
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
-    [Serializable]
     public class UserService : MarshalByRefObject, IUserService
     {
         #region Fields
@@ -27,15 +28,18 @@ namespace UserStorage
         private readonly IUserRepository userRepository;
         private int lastUserId;
 
-        private IEnumerable<IUserService> slaveServices;
+        //private IEnumerable<IUserService> slaveServices;
 
         private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
 
-
+        // Will become absolete.
         IUserService service;
+
+        //IPEndPoint address;
 
         #endregion
 
+        // Will become Absolete.
         #region Events
         /// <summary>
         /// Event raised after user storage was changed.
@@ -49,7 +53,7 @@ namespace UserStorage
         /// </summary>
         public UserService()
         {
-            slaveServices = new List<IUserService>();
+            Slaves = new List<IPEndPoint>();
         }
 
         /// <summary>
@@ -58,24 +62,37 @@ namespace UserStorage
         /// <param name="idGenerator"> IGenerator` instance.</param>
         /// <param name="userValidator"> UserValidator instance.</param>
         /// <param name="userRepository"> UserRepository instance.</param>
-        public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository) : this()
+        public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository,  bool isMaster = false) : this()
         {
             this.idGenerator = idGenerator;
             this.userValidator = userValidator;
             this.userRepository = userRepository;
+            IsMaster = isMaster;
+            //if (!IsMaster) StartListener();
         }
 
         // SLAVE .CTOR.
-        public UserService(IUserService masterService, IUserRepository userRepository)
-        {
-            service = masterService;
-            this.userRepository = userRepository;
+        //public UserService(IUserService masterService, IUserRepository userRepository)
+        //{
+        //    service = masterService;
+        //    this.userRepository = userRepository;
 
-            (service as UserService).StorageChanged += OnStorageChanged;
-        }
+        //    (service as UserService).StorageChanged += OnStorageChanged;
+        //}
         #endregion
 
         #region Properties
+
+        /// <summary>
+        /// Service address.
+        /// </summary>
+        public IPEndPoint Address { get; set; }
+
+        /// <summary>
+        /// Gets or sets collection of slave services.
+        /// </summary>
+        public List<IPEndPoint> Slaves { get; set; }
+
         /// <summary>
         /// Gets or sets weather this service is master.
         /// </summary>
@@ -101,9 +118,10 @@ namespace UserStorage
             user.Id = lastUserId;
             userRepository.Create(user);
 
+            var message = new StorageChangedMessage() { IsAdded = true, User = user };
+            NotifySlaves(message);
 
-            OnStorageChanged(new StorageChangedEventArgs(user, added:true));
-
+            //OnStorageChanged(new StorageChangedEventArgs(user, added:true));
 
             return lastUserId;
         }
@@ -121,9 +139,10 @@ namespace UserStorage
             }
             userRepository.Delete(user);
 
+            var message = new StorageChangedMessage() { IsRemoved = true, User = user };
+            NotifySlaves(message);
 
-            OnStorageChanged(new StorageChangedEventArgs(user, removed:true));
-
+            //OnStorageChanged(new StorageChangedEventArgs(user, removed:true));
 
         }
 
@@ -187,7 +206,7 @@ namespace UserStorage
                 xmlReader.ReadStartElement();
                 int.TryParse(xmlReader.ReadElementString("Value"), out lastUserId);
                 xmlReader.ReadEndElement();
-                var users = new XmlSerializer(userRepository.GetAll().GetType()/*, new XmlRootAttribute("Users")*/).Deserialize(xmlReader) as List<User>;
+                var users = new XmlSerializer(userRepository.GetAll().GetType()).Deserialize(xmlReader) as List<User>;
                 InitUsers(users);
             }
             catch (InvalidOperationException ex)
@@ -222,7 +241,7 @@ namespace UserStorage
                 xmlWriter.WriteStartElement("LastId");
                 xmlWriter.WriteElementString("Value", lastUserId.ToString());
                 xmlWriter.WriteEndElement();
-                new XmlSerializer(userRepository.GetAll().GetType()/*, new XmlRootAttribute("Users")*/).Serialize(xmlWriter, userRepository.GetAll());
+                new XmlSerializer(userRepository.GetAll().GetType()).Serialize(xmlWriter, userRepository.GetAll());
                 xmlWriter.WriteEndElement();
             }
             catch (InvalidOperationException ex)
@@ -245,6 +264,7 @@ namespace UserStorage
 
         #endregion
 
+        // Will become absolete
         #region Protected Methods
         /// <summary>
         /// Raises the StorageChanged event.
@@ -274,6 +294,46 @@ namespace UserStorage
         }
 
         XmlSchema IXmlSerializable.GetSchema() => null;
+
+        public async void StartListener()
+        {
+            var tcpListener = TcpListener.Create(Address.Port);
+            tcpListener.Start();
+            var tcpClient = await tcpListener.AcceptTcpClientAsync();
+            using (var networkStream = tcpClient.GetStream())
+            {
+                var buffer = new byte[1024];
+                var byteCount = await networkStream.ReadAsync(buffer, 0, buffer.Length);
+                var formatter = new BinaryFormatter();
+                var message = formatter.Deserialize(networkStream) as StorageChangedMessage;
+                UpdateData(message);
+            }
+        }
+
+        private async void NotifySlaves(StorageChangedMessage message)
+        {
+            foreach (var addr in Slaves)
+            {
+                using (var tcpClient = new TcpClient())
+                {
+                    await tcpClient.ConnectAsync(addr.Address, addr.Port);
+                    using (var networkStream = tcpClient.GetStream())
+                    {
+                        var stream = new MemoryStream();
+                        BinaryFormatter formatter = new BinaryFormatter();
+                        formatter.Serialize(stream, message);
+                        stream.Flush();
+                        await networkStream.WriteAsync(stream.GetBuffer(), 0, stream.GetBuffer().Length);
+                    }
+                }
+            }
+        }
+
+        private void UpdateData(StorageChangedMessage message)
+        {
+            if (message.IsAdded) userRepository.Create(message.User);
+            if (message.IsRemoved) userRepository.Delete(message.User);
+        }
         #endregion
     }
 }

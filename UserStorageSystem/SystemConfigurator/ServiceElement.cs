@@ -61,6 +61,38 @@ namespace SystemConfigurator
             }
         }
 
+        /// <summary>
+        /// Gets or sets service host.
+        /// </summary>
+        [ConfigurationProperty("host", DefaultValue = "", IsKey = false, IsRequired = true)]
+        public string Host
+        {
+            get
+            {
+                return ((string)(base["host"]));
+            }
+            set
+            {
+                base["host"] = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets service host.
+        /// </summary>
+        [ConfigurationProperty("port", DefaultValue = "", IsKey = false, IsRequired = true)]
+        public string Port
+        {
+            get
+            {
+                return ((string)(base["port"]));
+            }
+            set
+            {
+                base["port"] = value;
+            }
+        }
+
         #endregion
     }
 }

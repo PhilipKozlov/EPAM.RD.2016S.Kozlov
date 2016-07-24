@@ -32,8 +32,8 @@ namespace Client
 
 
             Task.Factory.StartNew(() => CreateDelete(proxy));
-            Task.Factory.StartNew(() => Delete(proxy));
-            Task.Factory.StartNew(() => Searh(proxy, "John", "Smith"));
+            //Task.Factory.StartNew(() => Delete(proxy));
+            //Task.Factory.StartNew(() => Searh(proxy, "John", "Smith"));
 
             Console.ReadKey();
 

@@ -13,6 +13,8 @@ using System.IO;
 using System.Xml.Serialization;
 using IDGenerator;
 using System.Diagnostics;
+using System.Net;
+using Ninject.Parameters;
 
 namespace SystemConfigurator
 {
@@ -42,30 +44,42 @@ namespace SystemConfigurator
         /// <returns> Collection of services.</returns>
         public static ProxyService ConfigurateServices()
         {
-            // TODO : Add master/slave related exceptions.
-            
             var services = new List<IUserService>();
             var section = (ServiceConfigSection)ConfigurationManager.GetSection("ServiceConfig");
             if (section != null)
             {
+                var serviceElements = section.ServiceItems.Cast<ServiceElement>();
+                if (serviceElements.Where(si => si.Role == "Master").Count() > 1) throw new ArgumentException("Can have only one master.");
+                if (serviceElements.Where(si => si.Role == "Slave").Count() < 1) throw new ArgumentException("Must have at least one slave.");
+
                 var i = 0;
-                foreach (var si in section.ServiceItems)
+                foreach (var si in serviceElements)
                 {
                     IUserService service = null;
-                    if ((si as ServiceElement).Role == "Master")
+                    if (si.Role == "Master")
                     {
-                        service = kernel.Get(Type.GetType((si as ServiceElement).Type, true, false)) as IUserService;
+                        service = kernel.Get(Type.GetType(si.Type, true, false), new ConstructorArgument("isMaster", true)) as IUserService;
+                        SetAddress(service, si);
                         //service = CreateMasterInAppDomain($"MasterServiceDomain{i}", (si as ServiceElement).Type);
                         masterService = service;
-                        masterService.IsMaster = true;
                     }
-                    if ((si as ServiceElement).Role == "Slave")
+                    if (si.Role == "Slave")
                     {
-                        service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", (si as ServiceElement).Type);
+                        service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", si.Type);
+                        SetAddress(service, si);
+                        (service as UserService).StartListener();
                     }
+
+                    //var ip = IPAddress.Parse(si.Host);
+                    //var port = int.Parse(si.Port);
+                    //var address = new IPEndPoint(ip, port);
+                    //service.Address = address;
+
                     services.Add(service);
                     i++;
                 }
+
+                masterService.Slaves = services.Where(s => s.IsMaster != true).Select(s => s.Address).ToList();
                 LoadServiceState();
             }
 
@@ -115,12 +129,14 @@ namespace SystemConfigurator
 
             // hardcode
             var repository = kernel.Get<IUserRepository>();
+            var generator = kernel.Get<IGenerator<int>>();
+            var validator = kernel.Get<IUserValidator>();
             //
             IUserService service;
             try
             {
                 assemblyToLoad = Type.GetType(slaveType, true, false).Assembly.FullName;
-                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { masterService, repository }, null, null) as IUserService;
+                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository, false }, null, null) as IUserService;
             }
             catch (TypeLoadException ex)
             {
@@ -148,6 +164,14 @@ namespace SystemConfigurator
             }
 
             return service;
+        }
+
+        private static void SetAddress(IUserService service, ServiceElement si)
+        {
+            var ip = IPAddress.Parse(si.Host);
+            var port = int.Parse(si.Port);
+            var address = new IPEndPoint(ip, port);
+            service.Address = address;
         }
 
         //private static IUserService CreateMasterInAppDomain(string domainName, string masterType)

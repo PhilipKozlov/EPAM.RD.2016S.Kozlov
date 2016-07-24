@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
@@ -12,6 +13,16 @@ namespace UserStorage
     /// </summary>
     public interface IUserService : IXmlSerializable
     {
+        /// <summary>
+        /// Service address.
+        /// </summary>
+        IPEndPoint Address { get; set; }
+
+        /// <summary>
+        /// Gets or sets collection of slave services.
+        /// </summary>
+        List<IPEndPoint> Slaves { get; set; }
+
         /// <summary>
         /// Gets or sets weather this service is master.
         /// </summary>
