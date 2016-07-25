@@ -14,37 +14,25 @@ using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Xml.Linq;
 
 namespace UserStorage
 {
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
-    public class UserService : MarshalByRefObject, IUserService
+    public class UserService : MarshalByRefObject, IUserService, IXmlSerializable
     {
         #region Fields
         private readonly IGenerator<int> idGenerator;
         private readonly IUserValidator userValidator;
         private readonly IUserRepository userRepository;
+        private IPEndPoint address;
+        private List<IPEndPoint> services;
         private int lastUserId;
-
-        //private IEnumerable<IUserService> slaveServices;
+        private bool isMaster;
 
         private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
-
-        // Will become absolete.
-        IUserService service;
-
-        //IPEndPoint address;
-
-        #endregion
-
-        // Will become Absolete.
-        #region Events
-        /// <summary>
-        /// Event raised after user storage was changed.
-        /// </summary>
-        public event EventHandler<StorageChangedEventArgs> StorageChanged = delegate { };
         #endregion
 
         #region Constructors
@@ -53,32 +41,38 @@ namespace UserStorage
         /// </summary>
         public UserService()
         {
-            Slaves = new List<IPEndPoint>();
+            services = new List<IPEndPoint>();
         }
 
         /// <summary>
-        /// Instanciates MasterUserService with specified parameter.
+        /// Instanciates UserService with specified parameters.
         /// </summary>
         /// <param name="idGenerator"> IGenerator` instance.</param>
         /// <param name="userValidator"> UserValidator instance.</param>
         /// <param name="userRepository"> UserRepository instance.</param>
-        public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository,  bool isMaster = false) : this()
+        public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository, IPEndPoint address) : this()
         {
             this.idGenerator = idGenerator;
             this.userValidator = userValidator;
             this.userRepository = userRepository;
-            IsMaster = isMaster;
-            //if (!IsMaster) StartListener();
+            this.address = address;
+            StartListener();
         }
 
-        // SLAVE .CTOR.
-        //public UserService(IUserService masterService, IUserRepository userRepository)
-        //{
-        //    service = masterService;
-        //    this.userRepository = userRepository;
+        /// <summary>
+        /// Instanciates UserService with specified parameters.
+        /// </summary>
+        /// <param name="idGenerator"> IGenerator` instance.</param>
+        /// <param name="userValidator"> UserValidator instance.</param>
+        /// <param name="userRepository"> UserRepository instance.</param>
+        public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository, IPEndPoint address, List<IPEndPoint> services) 
+            : this(idGenerator, userValidator, userRepository, address)
+        {
+            if (services == null) throw new ArgumentNullException(nameof(services));
+            this.services = services;
+            isMaster = true;
+        }
 
-        //    (service as UserService).StorageChanged += OnStorageChanged;
-        //}
         #endregion
 
         #region Properties
@@ -86,17 +80,12 @@ namespace UserStorage
         /// <summary>
         /// Service address.
         /// </summary>
-        public IPEndPoint Address { get; set; }
+        public IPEndPoint Address => address;
 
         /// <summary>
-        /// Gets or sets collection of slave services.
+        /// Gets weather this service is master.
         /// </summary>
-        public List<IPEndPoint> Slaves { get; set; }
-
-        /// <summary>
-        /// Gets or sets weather this service is master.
-        /// </summary>
-        public bool IsMaster { get; set; }
+        public bool IsMaster => isMaster;
         #endregion
 
         #region IUserService Methods
@@ -120,9 +109,6 @@ namespace UserStorage
 
             var message = new StorageChangedMessage() { IsAdded = true, User = user };
             NotifySlaves(message);
-
-            //OnStorageChanged(new StorageChangedEventArgs(user, added:true));
-
             return lastUserId;
         }
 
@@ -141,9 +127,6 @@ namespace UserStorage
 
             var message = new StorageChangedMessage() { IsRemoved = true, User = user };
             NotifySlaves(message);
-
-            //OnStorageChanged(new StorageChangedEventArgs(user, removed:true));
-
         }
 
         /// <summary>
@@ -199,14 +182,26 @@ namespace UserStorage
         public void ReadXml(XmlReader xmlReader)
         {
             if (!IsMaster) throw new NotSupportedException();
+            var doc = XDocument.Load(xmlReader);
+            int.TryParse(doc.Descendants("LastId").SingleOrDefault().Value, out lastUserId);
             try
             {
-                xmlReader.MoveToContent();
-                xmlReader.ReadStartElement();
-                xmlReader.ReadStartElement();
-                int.TryParse(xmlReader.ReadElementString("Value"), out lastUserId);
-                xmlReader.ReadEndElement();
-                var users = new XmlSerializer(userRepository.GetAll().GetType()).Deserialize(xmlReader) as List<User>;
+                var users = doc.Descendants("User").Select(u => new User
+                {
+                    Id = Convert.ToInt32(u.Element("Id").Value),
+                    Name = u.Element("Name").Value,
+                    LastName = u.Element("LastName").Value,
+                    DateOfBirth = Convert.ToDateTime(u.Element("DateOfBirth").Value),
+                    PersonalId = u.Element("PersonalId").Value,
+                    Gender = (Gender)Enum.Parse(typeof(Gender), u.Element("Gender").Value),
+                    VisaRecords = u.Descendants("VisaRecord").Select(vr => new VisaRecord
+                    {
+                        Country = vr.Element("Country").Value,
+                        Start = Convert.ToDateTime(vr.Element("Start").Value),
+                        End = Convert.ToDateTime(vr.Element("Start").Value),
+                    }).ToList()
+                }).ToList();
+
                 InitUsers(users);
             }
             catch (InvalidOperationException ex)
@@ -217,7 +212,7 @@ namespace UserStorage
                 }
                 throw;
             }
-            catch (XmlException ex)
+            catch (Exception ex)
             {
                 if (boolSwitch.Enabled)
                 {
@@ -234,15 +229,23 @@ namespace UserStorage
         public void WriteXml(XmlWriter xmlWriter)
         {
             if (!IsMaster) throw new NotSupportedException();
+            var doc = new XDocument(new XElement("ServiceState",
+                                    new XElement("LastId", lastUserId),
+                                    new XElement("Users", userRepository.GetAll().Select(u => new XElement("User",
+                                        new XElement("Id", u.Id),
+                                        new XElement("Name", u.Name),
+                                        new XElement("LastName", u.LastName),
+                                        new XElement("DateOfBirth", u.DateOfBirth),
+                                        new XElement("PersonalId", u.PersonalId),
+                                        new XElement("Gender", u.Gender),
+                                        new XElement("VisaRecords", u.VisaRecords.Select(vr => new XElement("VisaRecord",
+                                            new XElement("Country", vr.Country),
+                                            new XElement("Start", vr.Start),
+                                            new XElement("End", vr.End))))
+            )))));
             try
             {
-                xmlWriter.WriteStartDocument();
-                xmlWriter.WriteStartElement("ServiceState");
-                xmlWriter.WriteStartElement("LastId");
-                xmlWriter.WriteElementString("Value", lastUserId.ToString());
-                xmlWriter.WriteEndElement();
-                new XmlSerializer(userRepository.GetAll().GetType()).Serialize(xmlWriter, userRepository.GetAll());
-                xmlWriter.WriteEndElement();
+                doc.Save(xmlWriter);
             }
             catch (InvalidOperationException ex)
             {
@@ -252,7 +255,7 @@ namespace UserStorage
                 }
                 throw;
             }
-            catch (EncoderFallbackException ex)
+            catch (Exception ex)
             {
                 if (boolSwitch.Enabled)
                 {
@@ -264,66 +267,57 @@ namespace UserStorage
 
         #endregion
 
-        // Will become absolete
-        #region Protected Methods
-        /// <summary>
-        /// Raises the StorageChanged event.
-        /// </summary>
-        /// <param name="e"> Additional event arguments.</param>
-        protected virtual void OnStorageChanged(StorageChangedEventArgs e)
-        {
-            StorageChanged.Invoke(this, e);
-        }
-
-        private void OnStorageChanged(object sender, StorageChangedEventArgs e)
-        {
-            var user = e.User;
-            if (e.IsAdded) userRepository.GetAll().Add(e.User);
-            if (e.IsRemoved) userRepository.GetAll().Remove(e.User);
-        }
-
-        #endregion
-
         #region Private Methods
         private void InitUsers(List<User> users)
         {
             foreach (var u in users)
             {
-                CreateUser(u);
+                userRepository.Create(u);
+                var message = new StorageChangedMessage() { IsAdded = true, User = u };
+                NotifySlaves(message);
             }
         }
 
         XmlSchema IXmlSerializable.GetSchema() => null;
 
-        public async void StartListener()
+        private void StartListener()
         {
-            var tcpListener = TcpListener.Create(Address.Port);
-            tcpListener.Start();
-            var tcpClient = await tcpListener.AcceptTcpClientAsync();
-            using (var networkStream = tcpClient.GetStream())
+            Task.Run( () =>
             {
-                var buffer = new byte[1024];
-                var byteCount = await networkStream.ReadAsync(buffer, 0, buffer.Length);
-                var formatter = new BinaryFormatter();
-                var message = formatter.Deserialize(networkStream) as StorageChangedMessage;
-                UpdateData(message);
-            }
+                var tcpListener = TcpListener.Create(address.Port);
+                tcpListener.Start();
+                while (true)
+                {
+                    var tcpClient = tcpListener.AcceptTcpClient();
+
+                    using (var networkStream = tcpClient.GetStream())
+                    {
+                        var buffer = new byte[256];
+                        var byteCount = networkStream.Read(buffer, 0, buffer.Length);
+                        var formatter = new BinaryFormatter();
+                        var message = formatter.Deserialize(networkStream) /*as StorageChangedMessage*/;
+                        //UpdateData(message);
+                    }
+
+                }
+            });
         }
 
-        private async void NotifySlaves(StorageChangedMessage message)
+        private void NotifySlaves(StorageChangedMessage message)
         {
-            foreach (var addr in Slaves)
+            var stream = new MemoryStream();
+            BinaryFormatter formatter = new BinaryFormatter();
+            formatter.Serialize(stream, message);
+
+
+            foreach (var addr in services)
             {
                 using (var tcpClient = new TcpClient())
                 {
-                    await tcpClient.ConnectAsync(addr.Address, addr.Port);
+                    tcpClient.Connect(addr.Address, addr.Port);
                     using (var networkStream = tcpClient.GetStream())
                     {
-                        var stream = new MemoryStream();
-                        BinaryFormatter formatter = new BinaryFormatter();
-                        formatter.Serialize(stream, message);
-                        stream.Flush();
-                        await networkStream.WriteAsync(stream.GetBuffer(), 0, stream.GetBuffer().Length);
+                        networkStream.Write(stream.GetBuffer(), 0, stream.GetBuffer().Length);
                     }
                 }
             }

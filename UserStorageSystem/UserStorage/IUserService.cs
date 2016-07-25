@@ -11,22 +11,12 @@ namespace UserStorage
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
-    public interface IUserService : IXmlSerializable
+    public interface IUserService
     {
-        /// <summary>
-        /// Service address.
-        /// </summary>
-        IPEndPoint Address { get; set; }
-
-        /// <summary>
-        /// Gets or sets collection of slave services.
-        /// </summary>
-        List<IPEndPoint> Slaves { get; set; }
-
         /// <summary>
         /// Gets or sets weather this service is master.
         /// </summary>
-        bool IsMaster { get; set; }
+        bool IsMaster { get; }
         /// <summary>
         /// Creates a new user.
         /// </summary>

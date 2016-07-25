@@ -16,22 +16,22 @@ namespace Client
             var proxy = Configurator.ConfigurateServices();
             var user = proxy.FindByNameAndLastName("Jane", "Doe");
 
-            //Console.WriteLine(user.FirstOrDefault());
+            Console.WriteLine(user.FirstOrDefault());
 
-            //var newUser = new User
-            //{
-            //    Name = "John",
-            //    LastName = "Smith",
-            //    DateOfBirth = DateTime.Now,
-            //    PersonalId = "12345678901234",
-            //    Gender = Gender.Male
-            //};
+            var newUser = new User
+            {
+                Name = "John",
+                LastName = "Smith",
+                DateOfBirth = DateTime.Now,
+                PersonalId = "12345678901234",
+                Gender = Gender.Male
+            };
 
-            //var newUserId = proxy.CreateUser(newUser);
-            //Console.WriteLine(newUserId);
+            var newUserId = proxy.CreateUser(newUser);
+            Console.WriteLine(newUserId);
 
 
-            Task.Factory.StartNew(() => CreateDelete(proxy));
+            //Task.Factory.StartNew(() => CreateDelete(proxy));
             //Task.Factory.StartNew(() => Delete(proxy));
             //Task.Factory.StartNew(() => Searh(proxy, "John", "Smith"));
 

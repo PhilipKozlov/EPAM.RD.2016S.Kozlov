@@ -24,7 +24,7 @@ namespace SystemConfigurator
     public static class Configurator
     {
         #region Fields
-        private static IUserService masterService;
+        private static UserService masterService;
         private static readonly StandardKernel kernel;
         private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
         #endregion
@@ -53,38 +53,27 @@ namespace SystemConfigurator
                 if (serviceElements.Where(si => si.Role == "Slave").Count() < 1) throw new ArgumentException("Must have at least one slave.");
 
                 var i = 0;
+                // configure slaves
                 foreach (var si in serviceElements)
                 {
-                    IUserService service = null;
-                    if (si.Role == "Master")
-                    {
-                        service = kernel.Get(Type.GetType(si.Type, true, false), new ConstructorArgument("isMaster", true)) as IUserService;
-                        SetAddress(service, si);
-                        //service = CreateMasterInAppDomain($"MasterServiceDomain{i}", (si as ServiceElement).Type);
-                        masterService = service;
-                    }
+                    UserService service = null;
                     if (si.Role == "Slave")
                     {
-                        service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", si.Type);
-                        SetAddress(service, si);
-                        (service as UserService).StartListener();
+                        service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", si.Type, GetAddress(si));
+                        services.Add(service);
+                        i++;
                     }
-
-                    //var ip = IPAddress.Parse(si.Host);
-                    //var port = int.Parse(si.Port);
-                    //var address = new IPEndPoint(ip, port);
-                    //service.Address = address;
-
-                    services.Add(service);
-                    i++;
                 }
 
-                masterService.Slaves = services.Where(s => s.IsMaster != true).Select(s => s.Address).ToList();
+                // configure master
+                var masterElement = serviceElements.SingleOrDefault(si => si.Role == "Master");
+                var serviceAdresses = services.Where(s => s.IsMaster != true).Select(s => (s as UserService).Address).ToList();
+                masterService = kernel.Get(Type.GetType(masterElement.Type, true, false), new ConstructorArgument("address", GetAddress(masterElement)),
+                    new ConstructorArgument("services", serviceAdresses)) as UserService;
                 LoadServiceState();
+                services.Add(masterService);
             }
-
             return new ProxyService(services);
-
         }
 
         /// <summary>
@@ -121,22 +110,21 @@ namespace SystemConfigurator
             }
         }
 
-        private static IUserService CreateServiceInAppDomain(string domainName, string slaveType)
+        private static UserService CreateServiceInAppDomain(string domainName, string serviceType, IPEndPoint address)
         {
             var domain = AppDomain.CreateDomain(domainName, null, null);
-            var typeToLoad = kernel.Get(Type.GetType(slaveType, true, false)).GetType().FullName;
+            var typeToLoad = kernel.Get(Type.GetType(serviceType, true, false)).GetType().FullName;
             string assemblyToLoad;
 
-            // hardcode
             var repository = kernel.Get<IUserRepository>();
             var generator = kernel.Get<IGenerator<int>>();
             var validator = kernel.Get<IUserValidator>();
-            //
-            IUserService service;
+
+            UserService service;
             try
             {
-                assemblyToLoad = Type.GetType(slaveType, true, false).Assembly.FullName;
-                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository, false }, null, null) as IUserService;
+                assemblyToLoad = Type.GetType(serviceType, true, false).Assembly.FullName;
+                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository, address }, null, null) as UserService;
             }
             catch (TypeLoadException ex)
             {
@@ -166,35 +154,13 @@ namespace SystemConfigurator
             return service;
         }
 
-        private static void SetAddress(IUserService service, ServiceElement si)
+        private static IPEndPoint GetAddress(ServiceElement si)
         {
             var ip = IPAddress.Parse(si.Host);
             var port = int.Parse(si.Port);
             var address = new IPEndPoint(ip, port);
-            service.Address = address;
+            return address;
         }
-
-        //private static IUserService CreateMasterInAppDomain(string domainName, string masterType)
-        //{
-        //    var domain = AppDomain.CreateDomain(domainName, null, null);
-        //    var typeToLoad = kernel.Get(Type.GetType(masterType, true, false)).GetType().FullName;
-        //    string assemblyToLoad;
-
-        //    // hardcode
-        //    var repository = kernel.Get<IUserRepository>();
-        //    var generator = kernel.Get<IGenerator<int>>();
-        //    var validator = kernel.Get<IUserValidator>();
-        //    //
-
-        //    IUserService service;
-        //    try
-        //    {
-        //        assemblyToLoad = Type.GetType(masterType, true, false).Assembly.FullName;
-        //        service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository }, null, null) as IUserService;
-        //    }
-
-        //    return service;
-        //}
         #endregion
     }
 }

@@ -6,6 +6,7 @@ using Validator;
 using DAL;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 
 namespace UserStorage.Tests
 {
@@ -15,13 +16,13 @@ namespace UserStorage.Tests
         private IUserRepository userRepository = new InMemoryUserRepository();
         private IGenerator<int> idGenerator = new PrimeGenerator();
         private IUserValidator userValidator = new UserValidator();
+        private IPEndPoint address = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 1111);
 
 
         [TestMethod]
         public void CreateUser_NewUser_ReturnOne()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository);
-            userService.IsMaster = true;
+            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
             var user = new User()
             {
                 Name = "John",
@@ -36,8 +37,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByName_John_ReturnIEnumerableOfOneUser()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository);
-            userService.IsMaster = true;
+            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
             var user = new User()
             {
                 Name = "John",
@@ -52,8 +52,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByNameAndLastName_JohnDoe_ReturnIEnumerableOfOneUser()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository);
-            userService.IsMaster = true;
+            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
             var user = new User()
             {
                 Name = "John",
@@ -68,8 +67,7 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByPersonalId_12345678901234_ReturnIEnumerableOfOneUser()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository);
-            userService.IsMaster = true;
+            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
             var user = new User()
             {
                 Name = "John",
@@ -85,8 +83,7 @@ namespace UserStorage.Tests
         [ExpectedException(typeof(NotSupportedException))]
         public void CreateUser_NewUser_NotSupportedException()
         {
-            var masterUserService = new UserService(idGenerator, userValidator, userRepository);
-            var userService = new UserService(masterUserService, userRepository);
+            var userService = new UserService(idGenerator, userValidator, userRepository, address);
             var actual = userService.CreateUser(new User());
         }
 
@@ -94,8 +91,7 @@ namespace UserStorage.Tests
         [ExpectedException(typeof(NotSupportedException))]
         public void DeleteUser_User_NotSupportedException()
         {
-            var masterUserService = new UserService(idGenerator, userValidator, userRepository);
-            var userService = new UserService(masterUserService, userRepository);
+            var userService = new UserService(idGenerator, userValidator, userRepository, address);
             userService.DeleteUser(new User());
         }
 
