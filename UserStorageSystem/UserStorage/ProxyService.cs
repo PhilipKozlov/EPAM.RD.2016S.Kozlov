@@ -17,7 +17,7 @@ namespace UserStorage
     {
         #region Fields
         private readonly IList<IUserService> servicePool;
-        private int nextInLine = 0;
+        private int nextInLine;
         #endregion
 
         #region Constructors
@@ -29,6 +29,7 @@ namespace UserStorage
         {
             if (services == null) throw new ArgumentNullException(nameof(services));
             servicePool = services;
+            nextInLine = 0;
         }
         #endregion
 

@@ -35,6 +35,22 @@ namespace UserStorage.Tests
         }
 
         [TestMethod]
+        public void DeleteUser_ExistingUser_UserDeleted()
+        {
+            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
+            var user = new User()
+            {
+                Name = "John",
+                LastName = "Doe",
+                PersonalId = "12345678901234"
+            };
+            var expected = 0;
+            var actual = userService.CreateUser(user);
+            userService.DeleteUser(user);
+            Assert.AreEqual(expected, userRepository.GetAll().Count());
+        }
+
+        [TestMethod]
         public void FindByName_John_ReturnIEnumerableOfOneUser()
         {
             var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());

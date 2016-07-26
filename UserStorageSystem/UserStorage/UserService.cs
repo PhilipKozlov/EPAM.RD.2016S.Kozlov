@@ -178,15 +178,16 @@ namespace UserStorage
         /// <summary>
         /// Generates an object from its XML representation.
         /// </summary>
-        /// <param name="filePath"> The path to the xml file.</param>
+        /// <param name="xmlReader"> XmlReader instance.</param>
         public void ReadXml(XmlReader xmlReader)
         {
             if (!IsMaster) throw new NotSupportedException();
             var doc = XDocument.Load(xmlReader);
             int.TryParse(doc.Descendants("LastId").SingleOrDefault().Value, out lastUserId);
+            var users = new List<User>();
             try
             {
-                var users = doc.Descendants("User").Select(u => new User
+                users = doc.Descendants("User").Select(u => new User
                 {
                     Id = Convert.ToInt32(u.Element("Id").Value),
                     Name = u.Element("Name").Value,
@@ -202,7 +203,6 @@ namespace UserStorage
                     }).ToList()
                 }).ToList();
 
-                InitUsers(users);
             }
             catch (InvalidOperationException ex)
             {
@@ -220,6 +220,7 @@ namespace UserStorage
                 }
                 throw;
             }
+            InitUsers(users);
         }
 
         /// <summary>
@@ -292,11 +293,12 @@ namespace UserStorage
 
                     using (var networkStream = tcpClient.GetStream())
                     {
-                        var buffer = new byte[256];
+                        var buffer = new byte[1024];
                         var byteCount = networkStream.Read(buffer, 0, buffer.Length);
                         var formatter = new BinaryFormatter();
-                        var message = formatter.Deserialize(networkStream) /*as StorageChangedMessage*/;
-                        //UpdateData(message);
+                        var stream = new MemoryStream(buffer);
+                        var message = formatter.Deserialize(stream) as StorageChangedMessage;
+                        UpdateData(message);
                     }
 
                 }
@@ -305,22 +307,24 @@ namespace UserStorage
 
         private void NotifySlaves(StorageChangedMessage message)
         {
-            var stream = new MemoryStream();
-            BinaryFormatter formatter = new BinaryFormatter();
-            formatter.Serialize(stream, message);
-
-
-            foreach (var addr in services)
+            Task.Run(() =>
             {
-                using (var tcpClient = new TcpClient())
+                var stream = new MemoryStream();
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(stream, message);
+
+                foreach (var addr in services)
                 {
-                    tcpClient.Connect(addr.Address, addr.Port);
-                    using (var networkStream = tcpClient.GetStream())
+                    using (var tcpClient = new TcpClient())
                     {
-                        networkStream.Write(stream.GetBuffer(), 0, stream.GetBuffer().Length);
+                        tcpClient.Connect(addr.Address, addr.Port);
+                        using (var networkStream = tcpClient.GetStream())
+                        {
+                            networkStream.Write(stream.GetBuffer(), 0, stream.GetBuffer().Length);
+                        }
                     }
                 }
-            }
+            });
         }
 
         private void UpdateData(StorageChangedMessage message)

@@ -11,29 +11,31 @@ namespace Client
 {
     class Program
     {
+        static ManualResetEventSlim mres =  new ManualResetEventSlim(false);
+
         static void Main(string[] args)
         {
             var proxy = Configurator.ConfigurateServices();
-            var user = proxy.FindByNameAndLastName("Jane", "Doe");
+            //var user = proxy.FindByNameAndLastName("Jane", "Doe");
 
-            Console.WriteLine(user.FirstOrDefault());
+            //Console.WriteLine(user.FirstOrDefault());
 
-            var newUser = new User
-            {
-                Name = "John",
-                LastName = "Smith",
-                DateOfBirth = DateTime.Now,
-                PersonalId = "12345678901234",
-                Gender = Gender.Male
-            };
+            //var newUser = new User
+            //{
+            //    Name = "John",
+            //    LastName = "Smith",
+            //    DateOfBirth = DateTime.Now,
+            //    PersonalId = "12345678901234",
+            //    Gender = Gender.Male
+            //};
 
-            var newUserId = proxy.CreateUser(newUser);
-            Console.WriteLine(newUserId);
+            //var newUserId = proxy.CreateUser(newUser);
+            //Console.WriteLine(newUserId);
 
-
-            //Task.Factory.StartNew(() => CreateDelete(proxy));
-            //Task.Factory.StartNew(() => Delete(proxy));
-            //Task.Factory.StartNew(() => Searh(proxy, "John", "Smith"));
+            Task.Factory.StartNew(() => Searh(proxy, "John", "Smith"));
+            Task.Factory.StartNew(() => CreateDelete(proxy));
+            Task.Factory.StartNew(() => Delete(proxy));
+            mres.Set();
 
             Console.ReadKey();
 
@@ -51,20 +53,20 @@ namespace Client
 
         private static void CreateDelete(ProxyService proxy)
         {
+            var newUser = new User
+            {
+                Name = "John",
+                LastName = "Smith",
+                DateOfBirth = DateTime.Now,
+                PersonalId = "12345678901234",
+                Gender = Gender.Male
+            };
+            mres.Wait();
             while (true)
             {
-                var newUser = new User
-                {
-                    Name = "John",
-                    LastName = "Smith",
-                    DateOfBirth = DateTime.Now,
-                    PersonalId = "12345678901234",
-                    Gender = Gender.Male
-                };
                 var newUserId = proxy.CreateUser(newUser);
-                newUser.Id = newUserId;
-                Console.WriteLine("New user : {0}", newUserId);
-                Thread.Sleep(1000);
+                Console.WriteLine("New user : {0}", newUser.Id);
+                Thread.Sleep(2000);
                 proxy.DeleteUser(newUser);
                 Console.WriteLine("User deleted.");
             }
@@ -72,20 +74,20 @@ namespace Client
 
         private static void Delete(ProxyService proxy)
         {
+            var newUser = new User
+            {
+                Name = "John",
+                LastName = "Smith",
+                DateOfBirth = DateTime.Now,
+                PersonalId = "12345678901234",
+                Gender = Gender.Male
+            };
+            mres.Wait();
             while (true)
             {
-                var newUser = new User
-                {
-                    Name = "John",
-                    LastName = "Smith",
-                    DateOfBirth = DateTime.Now,
-                    PersonalId = "12345678901234",
-                    Gender = Gender.Male
-                };
-                newUser.Id = proxy.FindByNameAndLastName("John", "Smith").FirstOrDefault();
                 proxy.DeleteUser(newUser);
                 Console.WriteLine("User deleted.");
-                Thread.Sleep(3000);
+                Thread.Sleep(2000);
             }
         }
     }

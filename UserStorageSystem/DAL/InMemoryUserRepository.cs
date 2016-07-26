@@ -23,13 +23,6 @@ namespace DAL
         private ReaderWriterLockSlim locker;
         #endregion
 
-
-        [OnDeserialized]
-        private void OnDeserialized(StreamingContext context)
-        {
-            locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
-        }
-
         #region Constructors
         /// <summary>
         /// Instanciates InMemoryUserRepository.
@@ -88,9 +81,21 @@ namespace DAL
             return users;
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting
+        /// unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
             locker.Dispose();
+        }
+        #endregion
+
+        #region Private Methods
+        [OnDeserialized]
+        private void OnDeserialized(StreamingContext context)
+        {
+            locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
         }
         #endregion
     }

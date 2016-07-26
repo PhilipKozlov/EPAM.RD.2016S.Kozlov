@@ -46,7 +46,7 @@ namespace SystemConfigurator
         }
 
         /// <summary>
-        /// Gets or sets service type.
+        /// Gets or sets service Role.
         /// </summary>
         [ConfigurationProperty("role", DefaultValue = "", IsKey = false, IsRequired = true)]
         public string Role
@@ -78,7 +78,7 @@ namespace SystemConfigurator
         }
 
         /// <summary>
-        /// Gets or sets service host.
+        /// Gets or sets service port.
         /// </summary>
         [ConfigurationProperty("port", DefaultValue = "", IsKey = false, IsRequired = true)]
         public string Port

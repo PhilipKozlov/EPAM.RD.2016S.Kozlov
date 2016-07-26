@@ -44,6 +44,24 @@ namespace Validator.Tests
         }
 
         [TestMethod]
+        public void IsValid_UserWithPersonalIdMoreThan14Characters_ReturnFalse()
+        {
+            var user = new User();
+            user.PersonalId = "1111111111111111";
+            var actual = validator.IsValid(user);
+            Assert.IsFalse(actual);
+        }
+
+        [TestMethod]
+        public void IsValid_UserWithPersonalIdLessThan14Characters_ReturnFalse()
+        {
+            var user = new User();
+            user.PersonalId = "11";
+            var actual = validator.IsValid(user);
+            Assert.IsFalse(actual);
+        }
+
+        [TestMethod]
         public void IsValid_UserWithNameContainingNonLetters_ReturnFalse()
         {
             var user = new User();
@@ -84,6 +102,31 @@ namespace Validator.Tests
             visa.End = date.AddDays(10);
             visa.Country = "10";
             user.VisaRecords.Add(visa);
+            var actual = validator.IsValid(user);
+            Assert.IsFalse(actual);
+        }
+
+        [TestMethod]
+        public void IsValid_UserWithOneOfTwoVisasInvalid_ReturnFalse()
+        {
+            var user = new User();
+            var visa = new VisaRecord();
+            visa.Start = DateTime.Now;
+            var date = DateTime.Now;
+            visa.End = date.AddDays(10);
+            visa.Country = "10";
+            var invalidVisa = new VisaRecord();
+            user.VisaRecords.Add(visa);
+            user.VisaRecords.Add(invalidVisa);
+            var actual = validator.IsValid(user);
+            Assert.IsFalse(actual);
+        }
+
+        [TestMethod]
+        public void IsValid_UserWithNullVisaRecords_ReturnFalse()
+        {
+            var user = new User();
+            user.VisaRecords = null;
             var actual = validator.IsValid(user);
             Assert.IsFalse(actual);
         }

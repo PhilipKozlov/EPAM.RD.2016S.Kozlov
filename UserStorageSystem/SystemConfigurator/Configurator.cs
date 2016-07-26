@@ -39,9 +39,9 @@ namespace SystemConfigurator
 
         #region Public Methods
         /// <summary>
-        /// Gets a collection of services.
+        /// Configurates all services.
         /// </summary>
-        /// <returns> Collection of services.</returns>
+        /// <returns> ProxyService instance.</returns>
         public static ProxyService ConfigurateServices()
         {
             var services = new List<IUserService>();
@@ -51,26 +51,8 @@ namespace SystemConfigurator
                 var serviceElements = section.ServiceItems.Cast<ServiceElement>();
                 if (serviceElements.Where(si => si.Role == "Master").Count() > 1) throw new ArgumentException("Can have only one master.");
                 if (serviceElements.Where(si => si.Role == "Slave").Count() < 1) throw new ArgumentException("Must have at least one slave.");
-
-                var i = 0;
-                // configure slaves
-                foreach (var si in serviceElements)
-                {
-                    UserService service = null;
-                    if (si.Role == "Slave")
-                    {
-                        service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", si.Type, GetAddress(si));
-                        services.Add(service);
-                        i++;
-                    }
-                }
-
-                // configure master
-                var masterElement = serviceElements.SingleOrDefault(si => si.Role == "Master");
-                var serviceAdresses = services.Where(s => s.IsMaster != true).Select(s => (s as UserService).Address).ToList();
-                masterService = kernel.Get(Type.GetType(masterElement.Type, true, false), new ConstructorArgument("address", GetAddress(masterElement)),
-                    new ConstructorArgument("services", serviceAdresses)) as UserService;
-                LoadServiceState();
+                services = ConfigureSlaves(serviceElements);
+                ConfigureMaster(serviceElements, services);
                 services.Add(masterService);
             }
             return new ProxyService(services);
@@ -96,6 +78,61 @@ namespace SystemConfigurator
         #endregion
 
         #region Private Methods
+        private static List<IUserService> ConfigureSlaves(IEnumerable<ServiceElement> serviceElements)
+        {
+            var services = new List<IUserService>();
+            var i = 0;
+            // configure slaves
+            foreach (var si in serviceElements)
+            {
+                UserService service = null;
+                if (si.Role == "Slave")
+                {
+                    service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", si.Type, GetAddress(si));
+                    services.Add(service);
+                    i++;
+                }
+            }
+            return services;
+        }
+
+        private static void ConfigureMaster(IEnumerable<ServiceElement> serviceElements, List<IUserService> services)
+        {
+            // configure master
+            var masterElement = serviceElements.SingleOrDefault(si => si.Role == "Master");
+            var serviceAdresses = services.Where(s => s.IsMaster != true).Select(s => (s as UserService).Address).ToList();
+
+            try
+            {
+                masterService = kernel.Get(Type.GetType(masterElement.Type, true, false), new ConstructorArgument("address", GetAddress(masterElement)),
+                    new ConstructorArgument("services", serviceAdresses)) as UserService;
+            }
+            catch (TypeLoadException ex)
+            {
+                if (boolSwitch.Enabled)
+                {
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                }
+                throw;
+            }
+            catch (FileLoadException ex)
+            {
+                if (boolSwitch.Enabled)
+                {
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (boolSwitch.Enabled)
+                {
+                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                }
+                throw;
+            }
+            LoadServiceState();
+        }
 
         private static void LoadServiceState()
         {
@@ -113,8 +150,6 @@ namespace SystemConfigurator
         private static UserService CreateServiceInAppDomain(string domainName, string serviceType, IPEndPoint address)
         {
             var domain = AppDomain.CreateDomain(domainName, null, null);
-            var typeToLoad = kernel.Get(Type.GetType(serviceType, true, false)).GetType().FullName;
-            string assemblyToLoad;
 
             var repository = kernel.Get<IUserRepository>();
             var generator = kernel.Get<IGenerator<int>>();
@@ -123,7 +158,8 @@ namespace SystemConfigurator
             UserService service;
             try
             {
-                assemblyToLoad = Type.GetType(serviceType, true, false).Assembly.FullName;
+                var typeToLoad = kernel.Get(Type.GetType(serviceType, true, false)).GetType().FullName;
+                string assemblyToLoad = Type.GetType(serviceType, true, false).Assembly.FullName;
                 service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository, address }, null, null) as UserService;
             }
             catch (TypeLoadException ex)
@@ -156,8 +192,10 @@ namespace SystemConfigurator
 
         private static IPEndPoint GetAddress(ServiceElement si)
         {
-            var ip = IPAddress.Parse(si.Host);
-            var port = int.Parse(si.Port);
+            IPAddress ip;
+            IPAddress.TryParse(si.Host, out ip);
+            int port;
+            int.TryParse(si.Port, out port);
             var address = new IPEndPoint(ip, port);
             return address;
         }
