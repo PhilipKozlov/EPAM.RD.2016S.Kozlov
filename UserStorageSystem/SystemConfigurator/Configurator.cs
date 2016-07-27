@@ -2,15 +2,12 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UserStorage;
 using Ninject;
 using System.Reflection;
 using CompositionRoot;
 using System.Xml;
 using System.IO;
-using System.Xml.Serialization;
 using IDGenerator;
 using System.Diagnostics;
 using System.Net;
@@ -51,8 +48,8 @@ namespace SystemConfigurator
                 var serviceElements = section.ServiceItems.Cast<ServiceElement>();
                 if (serviceElements.Where(si => si.Role == "Master").Count() > 1) throw new ArgumentException("Can have only one master.");
                 if (serviceElements.Where(si => si.Role == "Slave").Count() < 1) throw new ArgumentException("Must have at least one slave.");
-                services = ConfigureSlaves(serviceElements);
-                ConfigureMaster(serviceElements, services);
+                services = ConfigureSlaves(serviceElements.Where(si => si.Type == "Slave"));
+                ConfigureMaster(serviceElements.SingleOrDefault(si => si.Role == "Master"), services);
                 services.Add(masterService);
             }
             return new ProxyService(services);
@@ -82,29 +79,22 @@ namespace SystemConfigurator
         {
             var services = new List<IUserService>();
             var i = 0;
-            // configure slaves
             foreach (var si in serviceElements)
             {
-                UserService service = null;
-                if (si.Role == "Slave")
-                {
-                    service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", si.Type, GetAddress(si));
-                    services.Add(service);
-                    i++;
-                }
+                var service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", si.Type, GetAddress(si));
+                services.Add(service);
+                i++;
             }
             return services;
         }
 
-        private static void ConfigureMaster(IEnumerable<ServiceElement> serviceElements, List<IUserService> services)
+        private static void ConfigureMaster(ServiceElement master, List<IUserService> services)
         {
-            // configure master
-            var masterElement = serviceElements.SingleOrDefault(si => si.Role == "Master");
             var serviceAdresses = services.Where(s => s.IsMaster != true).Select(s => (s as UserService).Address).ToList();
 
             try
             {
-                masterService = kernel.Get(Type.GetType(masterElement.Type, true, false), new ConstructorArgument("address", GetAddress(masterElement)),
+                masterService = kernel.Get(Type.GetType(master.Type, true, false), new ConstructorArgument("address", GetAddress(master)),
                     new ConstructorArgument("services", serviceAdresses)) as UserService;
             }
             catch (TypeLoadException ex)

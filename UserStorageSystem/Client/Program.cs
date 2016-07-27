@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SystemConfigurator;
@@ -11,27 +9,11 @@ namespace Client
 {
     class Program
     {
-        static ManualResetEventSlim mres =  new ManualResetEventSlim(false);
+        static ManualResetEventSlim mres = new ManualResetEventSlim(false);
 
         static void Main(string[] args)
         {
             var proxy = Configurator.ConfigurateServices();
-            //var user = proxy.FindByNameAndLastName("Jane", "Doe");
-
-            //Console.WriteLine(user.FirstOrDefault());
-
-            //var newUser = new User
-            //{
-            //    Name = "John",
-            //    LastName = "Smith",
-            //    DateOfBirth = DateTime.Now,
-            //    PersonalId = "12345678901234",
-            //    Gender = Gender.Male
-            //};
-
-            //var newUserId = proxy.CreateUser(newUser);
-            //Console.WriteLine(newUserId);
-
             Task.Factory.StartNew(() => Searh(proxy, "John", "Smith"));
             Task.Factory.StartNew(() => CreateDelete(proxy));
             Task.Factory.StartNew(() => Delete(proxy));
@@ -64,10 +46,10 @@ namespace Client
             mres.Wait();
             while (true)
             {
-                var newUserId = proxy.CreateUser(newUser);
-                Console.WriteLine("New user : {0}", newUser.Id);
-                Thread.Sleep(2000);
-                proxy.DeleteUser(newUser);
+                var user = proxy.CreateUser(newUser);
+                Console.WriteLine("New user : {0}", user);
+                Thread.Sleep(1000);
+                proxy.DeleteUser(user);
                 Console.WriteLine("User deleted.");
             }
         }

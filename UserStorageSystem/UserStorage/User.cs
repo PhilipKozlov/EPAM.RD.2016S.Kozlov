@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UserStorage
 {
@@ -67,7 +64,7 @@ namespace UserStorage
         /// Returns a string that represents the current User.
         /// </summary>
         /// <returns> A string that represents the current User.</returns>
-        public override string ToString() => $"{Name} {LastName} {PersonalId}";
+        public override string ToString() => $"{Id} {Name} {LastName} {PersonalId}";
 
         /// <summary>
         /// Determines whether the specified object is equal to the current object.

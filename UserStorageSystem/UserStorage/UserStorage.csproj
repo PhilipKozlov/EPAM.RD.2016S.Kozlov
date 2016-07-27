@@ -50,6 +50,7 @@
     <Compile Include="StorageChangedMessage.cs" />
     <Compile Include="User.cs" />
     <Compile Include="VisaRecords.cs" />
+    <Compile Include="XDocumentExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IDGenerator\IDGenerator.csproj">

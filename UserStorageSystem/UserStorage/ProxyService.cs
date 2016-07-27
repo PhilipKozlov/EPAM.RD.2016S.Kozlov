@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Schema;
-using System.Xml.Serialization;
 
 namespace UserStorage
 {
@@ -40,7 +34,7 @@ namespace UserStorage
         /// </summary>
         /// <param name="user"> User instance.</param>
         /// <returns> Id generated for a new user.</returns>
-        public int CreateUser(User user)
+        public User CreateUser(User user)
         {
             return servicePool.SingleOrDefault(s => s.IsMaster).CreateUser(user);
         }

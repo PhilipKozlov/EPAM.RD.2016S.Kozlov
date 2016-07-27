@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Concurrent;
 using UserStorage;
 using System.Threading;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 
 namespace DAL
 {
@@ -15,12 +13,11 @@ namespace DAL
     /// Represents common functionality for accessing user storage.
     /// </summary>
     [Serializable]
-    public class InMemoryUserRepository : IUserRepository, IDisposable
+    public class InMemoryUserRepository : MarshalByRefObject, IUserRepository, IDisposable
     {
         #region Fields
-        private  List<User> Users { get; set; }
-        [NonSerialized]
-        private ReaderWriterLockSlim locker;
+        private List<User> users;
+        private readonly ReaderWriterLockSlim locker;
         #endregion
 
         #region Constructors
@@ -30,7 +27,7 @@ namespace DAL
         public InMemoryUserRepository()
         {
             locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
-            Users = new List<User>();
+            users = new List<User>();
         }
         #endregion
 
@@ -42,7 +39,7 @@ namespace DAL
         public IList<User> GetAll()
         {
             locker.EnterReadLock();
-            var users = Users;
+            var users = this.users;
             locker.ExitReadLock();
             return users;
         }
@@ -54,7 +51,7 @@ namespace DAL
         public void Create(User user)
         {
             locker.EnterWriteLock();
-            Users.Add(user);
+            users.Add(user);
             locker.ExitWriteLock();
         }
         /// <summary>
@@ -64,7 +61,7 @@ namespace DAL
         public void Delete(User user)
         {
             locker.EnterWriteLock();
-            Users.Remove(user);
+            users.Remove(user);
             locker.ExitWriteLock();
         }
         /// <summary>
@@ -76,9 +73,19 @@ namespace DAL
         {
             if (filter == null) throw new ArgumentNullException(nameof(filter));
             locker.EnterReadLock();
-            var users = Users.Where(filter.Compile());
+
+            var result = new List<User>();
+            Parallel.ForEach(users, (user)=>
+            {
+                users.Where(filter.Compile());
+                if ((filter.Compile().DynamicInvoke(user) as bool?).GetValueOrDefault())
+                {
+                    result.Add(user);
+                }
+            });
+            //var result = users.Where(filter.Compile());
             locker.ExitReadLock();
-            return users;
+            return result;
         }
 
         /// <summary>
@@ -88,14 +95,6 @@ namespace DAL
         public void Dispose()
         {
             locker.Dispose();
-        }
-        #endregion
-
-        #region Private Methods
-        [OnDeserialized]
-        private void OnDeserialized(StreamingContext context)
-        {
-            locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
         }
         #endregion
     }

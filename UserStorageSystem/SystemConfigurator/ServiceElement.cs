@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Configuration;
 
 namespace SystemConfigurator
 {
@@ -21,7 +16,7 @@ namespace SystemConfigurator
         {
             get
             {
-                return ((string)(base["type"]));
+                return (string)base["type"];
             }
             set
             {
@@ -37,7 +32,7 @@ namespace SystemConfigurator
         {
             get
             {
-                return ((string)(base["id"]));
+                return (string)base["id"];
             }
             set
             {
@@ -53,7 +48,7 @@ namespace SystemConfigurator
         {
             get
             {
-                return ((string)(base["role"]));
+                return (string)base["role"];
             }
             set
             {
@@ -69,7 +64,7 @@ namespace SystemConfigurator
         {
             get
             {
-                return ((string)(base["host"]));
+                return (string)base["host"];
             }
             set
             {
@@ -85,7 +80,7 @@ namespace SystemConfigurator
         {
             get
             {
-                return ((string)(base["port"]));
+                return (string)base["port"];
             }
             set
             {

@@ -1,20 +1,17 @@
-﻿using System;
+﻿using IDGenerator;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using IDGenerator;
-using System.Xml.Serialization;
-using System.Xml;
-using System.Xml.Schema;
 using System.Diagnostics;
-using System.Threading;
-using System.Net.Sockets;
-using System.Net;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
+using System.Xml.Schema;
+using System.Xml.Serialization;
+
 
 namespace UserStorage
 {
@@ -93,8 +90,8 @@ namespace UserStorage
         /// Creates a new user.
         /// </summary>
         /// <param name="user"> User instance.</param>
-        /// <returns> Id generated for a new user.</returns>
-        public int CreateUser(User user)
+        /// <returns> A new user.</returns>
+        public User CreateUser(User user)
         {
             if (!IsMaster) throw new NotSupportedException();
             if (boolSwitch.Enabled)
@@ -109,7 +106,7 @@ namespace UserStorage
 
             var message = new StorageChangedMessage() { IsAdded = true, User = user };
             NotifySlaves(message);
-            return lastUserId;
+            return user;
         }
 
         /// <summary>
@@ -182,7 +179,10 @@ namespace UserStorage
         public void ReadXml(XmlReader xmlReader)
         {
             if (!IsMaster) throw new NotSupportedException();
-            var doc = XDocument.Load(xmlReader);
+            var doc = new XDocument();
+            doc.TryLoad(xmlReader, out doc);
+            //var doc = XDocument.TryLoad(xmlReader);
+            if (!doc.TryLoad(xmlReader, out doc)) return;
             int.TryParse(doc.Descendants("LastId").SingleOrDefault().Value, out lastUserId);
             var users = new List<User>();
             try
@@ -230,20 +230,29 @@ namespace UserStorage
         public void WriteXml(XmlWriter xmlWriter)
         {
             if (!IsMaster) throw new NotSupportedException();
-            var doc = new XDocument(new XElement("ServiceState",
-                                    new XElement("LastId", lastUserId),
-                                    new XElement("Users", userRepository.GetAll().Select(u => new XElement("User",
-                                        new XElement("Id", u.Id),
-                                        new XElement("Name", u.Name),
-                                        new XElement("LastName", u.LastName),
-                                        new XElement("DateOfBirth", u.DateOfBirth),
-                                        new XElement("PersonalId", u.PersonalId),
-                                        new XElement("Gender", u.Gender),
-                                        new XElement("VisaRecords", u.VisaRecords.Select(vr => new XElement("VisaRecord",
-                                            new XElement("Country", vr.Country),
-                                            new XElement("Start", vr.Start),
-                                            new XElement("End", vr.End))))
-            )))));
+            var doc = new XDocument(
+                new XElement(
+                    "ServiceState",
+                     new XElement("LastId", lastUserId),
+                     new XElement(
+                         "Users", 
+                         userRepository.GetAll().Select(
+                             u => new XElement(
+                                 "User",
+                                  new XElement("Id", u.Id),
+                                  new XElement("Name", u.Name),
+                                  new XElement("LastName", u.LastName),
+                                  new XElement("DateOfBirth", u.DateOfBirth),
+                                  new XElement("PersonalId", u.PersonalId),
+                                  new XElement("Gender", u.Gender),
+                                  new XElement(
+                                      "VisaRecords", 
+                                      u.VisaRecords.Select(
+                                          vr => new XElement(
+                                                "VisaRecord",
+                                                new XElement("Country", vr.Country),
+                                                new XElement("Start", vr.Start),
+                                                new XElement("End", vr.End)))))))));
             try
             {
                 doc.Save(xmlWriter);
@@ -283,21 +292,20 @@ namespace UserStorage
 
         private void StartListener()
         {
-            Task.Run( () =>
+            Task.Run(async () =>
             {
                 var tcpListener = TcpListener.Create(address.Port);
                 tcpListener.Start();
                 while (true)
                 {
-                    var tcpClient = tcpListener.AcceptTcpClient();
+                    var tcpClient = await tcpListener.AcceptTcpClientAsync();
 
                     using (var networkStream = tcpClient.GetStream())
                     {
                         var buffer = new byte[1024];
-                        var byteCount = networkStream.Read(buffer, 0, buffer.Length);
-                        var formatter = new BinaryFormatter();
-                        var stream = new MemoryStream(buffer);
-                        var message = formatter.Deserialize(stream) as StorageChangedMessage;
+                        var byteCount = await networkStream.ReadAsync(buffer, 0, buffer.Length);
+                        var serializer = new XmlSerializer(typeof(StorageChangedMessage));
+                        var message = serializer.Deserialize(new MemoryStream(buffer)) as StorageChangedMessage;
                         UpdateData(message);
                     }
 
@@ -307,20 +315,23 @@ namespace UserStorage
 
         private void NotifySlaves(StorageChangedMessage message)
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 var stream = new MemoryStream();
-                BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(stream, message);
+                using (var textWriter = XmlWriter.Create(stream))
+                {
+                    var serializer = new XmlSerializer(typeof(StorageChangedMessage));
+                    serializer.Serialize(textWriter, message);
+                }
 
                 foreach (var addr in services)
                 {
                     using (var tcpClient = new TcpClient())
                     {
-                        tcpClient.Connect(addr.Address, addr.Port);
+                        await tcpClient.ConnectAsync(addr.Address, addr.Port);
                         using (var networkStream = tcpClient.GetStream())
                         {
-                            networkStream.Write(stream.GetBuffer(), 0, stream.GetBuffer().Length);
+                            await networkStream.WriteAsync(stream.GetBuffer(), 0, stream.GetBuffer().Length);
                         }
                     }
                 }

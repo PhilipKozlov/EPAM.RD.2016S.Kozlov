@@ -1,6 +1,4 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using IDGenerator;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace IDGenerator.Tests
 {

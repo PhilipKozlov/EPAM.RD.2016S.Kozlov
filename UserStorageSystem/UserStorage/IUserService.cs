@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Serialization;
+﻿using System.Collections.Generic;
 
 namespace UserStorage
 {
@@ -21,8 +15,8 @@ namespace UserStorage
         /// Creates a new user.
         /// </summary>
         /// <param name="user"> User instance.</param>
-        /// <returns> Id generated for a new user.</returns>
-        int CreateUser(User user);
+        /// <returns> A new user.</returns>
+        User CreateUser(User user);
         /// <summary>
         /// Deletes user from storage.
         /// </summary>
