@@ -24,21 +24,21 @@ namespace SystemConfigurator
             }
         }
 
-        /// <summary>
-        /// Gets or sets service id.
-        /// </summary>
-        [ConfigurationProperty("id", DefaultValue = "", IsKey = true, IsRequired = true)]
-        public string Id
-        {
-            get
-            {
-                return (string)base["id"];
-            }
-            set
-            {
-                base["id"] = value;
-            }
-        }
+        ///// <summary>
+        ///// Gets or sets service id.
+        ///// </summary>
+        //[ConfigurationProperty("id", DefaultValue = "", IsKey = true, IsRequired = true)]
+        //public string Id
+        //{
+        //    get
+        //    {
+        //        return (string)base["id"];
+        //    }
+        //    set
+        //    {
+        //        base["id"] = value;
+        //    }
+        //}
 
         /// <summary>
         /// Gets or sets service Role.
@@ -75,7 +75,7 @@ namespace SystemConfigurator
         /// <summary>
         /// Gets or sets service port.
         /// </summary>
-        [ConfigurationProperty("port", DefaultValue = "", IsKey = false, IsRequired = true)]
+        [ConfigurationProperty("port", DefaultValue = "", IsKey = true, IsRequired = true)]
         public string Port
         {
             get
@@ -88,6 +88,11 @@ namespace SystemConfigurator
             }
         }
 
+        [ConfigurationProperty("Slaves", IsDefaultCollection = false, IsRequired = false)]
+        public SlaveCollection Slaves
+        {
+            get { return (SlaveCollection)base["Slaves"]; }
+        }
         #endregion
     }
 }

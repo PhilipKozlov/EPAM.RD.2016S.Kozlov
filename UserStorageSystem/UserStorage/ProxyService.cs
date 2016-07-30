@@ -1,17 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 
 namespace UserStorage
 {
     /// <summary>
     /// Simple proxy, that uses Round-Robin algorithm to distribute load between services.
     /// </summary>
-    public class ProxyService
+    public class ProxyService : IUserService
     {
         #region Fields
         private readonly IList<IUserService> servicePool;
         private int nextInLine;
+        IPEndPoint address;
         #endregion
 
         #region Constructors
@@ -19,15 +21,20 @@ namespace UserStorage
         /// Instanciates ProxyUserService with specified parameters.
         /// </summary>
         /// <param name="services"> Collection of services.</param>
-        public ProxyService(IList<IUserService> services)
+        public ProxyService(IPEndPoint address, IList<IUserService> services)
         {
             if (services == null) throw new ArgumentNullException(nameof(services));
             servicePool = services;
+            this.address = address;
             nextInLine = 0;
         }
         #endregion
 
         #region IUserService Methods
+        /// <summary>
+        /// Gets weather this service is master.
+        /// </summary>
+        public bool IsMaster() => false;
 
         /// <summary>
         /// Creates a new user.
@@ -36,7 +43,7 @@ namespace UserStorage
         /// <returns> Id generated for a new user.</returns>
         public User CreateUser(User user)
         {
-            return servicePool.SingleOrDefault(s => s.IsMaster).CreateUser(user);
+            return servicePool.SingleOrDefault(s => s.IsMaster()).CreateUser(user);
         }
 
         /// <summary>
@@ -45,7 +52,7 @@ namespace UserStorage
         /// <param name="user"> user instance.</param>
         public void DeleteUser(User user)
         {
-            servicePool.SingleOrDefault(s => s.IsMaster).DeleteUser(user);
+            servicePool.SingleOrDefault(s => s.IsMaster()).DeleteUser(user);
         }
 
         /// <summary>
@@ -53,7 +60,7 @@ namespace UserStorage
         /// </summary>
         /// <param name="name"> User name.</param>
         /// <returns> Collection of users.</returns>
-        public IEnumerable<int> FindByName(string name)
+        public IEnumerable<User> FindByName(string name)
         {
             if (nextInLine >= servicePool.Count) nextInLine = 0;
             var result = servicePool[nextInLine].FindByName(name);
@@ -67,7 +74,7 @@ namespace UserStorage
         /// <param name="name"> User name.</param>
         /// <param name="lastName"> User last name.</param>
         /// <returns> Collection of users.</returns>
-        public IEnumerable<int> FindByNameAndLastName(string name, string lastName)
+        public IEnumerable<User> FindByNameAndLastName(string name, string lastName)
         {
             if (nextInLine >= servicePool.Count) nextInLine = 0;
             var result = servicePool[nextInLine].FindByNameAndLastName(name, lastName);
@@ -80,7 +87,7 @@ namespace UserStorage
         /// </summary>
         /// <param name="personalId"></param>
         /// <returns> Collection of users.</returns>
-        public IEnumerable<int> FindByPersonalId(string personalId)
+        public IEnumerable<User> FindByPersonalId(string personalId)
         {
             if (nextInLine >= servicePool.Count) nextInLine = 0;
             var result = servicePool[nextInLine].FindByPersonalId(personalId);

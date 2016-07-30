@@ -12,6 +12,7 @@ using IDGenerator;
 using System.Diagnostics;
 using System.Net;
 using Ninject.Parameters;
+using System.ServiceModel;
 
 namespace SystemConfigurator
 {
@@ -24,6 +25,9 @@ namespace SystemConfigurator
         private static UserService masterService;
         private static readonly StandardKernel kernel;
         private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
+
+        static ServiceHost serviceHost;
+
         #endregion
 
         #region Type Initializer
@@ -36,65 +40,79 @@ namespace SystemConfigurator
 
         #region Public Methods
         /// <summary>
-        /// Configurates all services.
+        /// Starts server.
         /// </summary>
-        /// <returns> ProxyService instance.</returns>
-        public static ProxyService ConfigurateServices()
+        public static void StartServer()
         {
-            var services = new List<IUserService>();
             var section = (ServiceConfigSection)ConfigurationManager.GetSection("ServiceConfig");
             if (section != null)
             {
-                var serviceElements = section.ServiceItems.Cast<ServiceElement>();
-                if (serviceElements.Where(si => si.Role == "Master").Count() > 1) throw new ArgumentException("Can have only one master.");
-                if (serviceElements.Where(si => si.Role == "Slave").Count() < 1) throw new ArgumentException("Must have at least one slave.");
-                services = ConfigureSlaves(serviceElements.Where(si => si.Type == "Slave"));
-                ConfigureMaster(serviceElements.SingleOrDefault(si => si.Role == "Master"), services);
-                services.Add(masterService);
+                var serviceElement = section.ServiceItems.Cast<ServiceElement>().SingleOrDefault();
+                if (serviceElement.Role == "Master")
+                {
+                    var slaveElements = serviceElement.Slaves.Cast<SlaveElement>();
+                    ConfigureMaster(serviceElement, slaveElements);
+                }
+                else if (serviceElement.Role == "Proxy")
+                {
+                    var serviceElements = serviceElement.Slaves.Cast<SlaveElement>();
+                    ConfigureProxy(serviceElement, serviceElements);
+                }
+                else
+                {
+                    ConfigureSlave(serviceElement);
+                }
             }
-            return new ProxyService(services);
         }
 
         /// <summary>
-        /// Saves master service state to xml file.
+        /// Shut down server.
         /// </summary>
-        /// <param name="masterService"> IMasterUserService instance.</param>
-        /// <param name="filePath"> path to xml file.</param>
-        public static void SaveServiceState()
+        public static void ShutDownServer()
         {
-            var filePath = ConfigurationManager.AppSettings["Path"];
-            if (!File.Exists(filePath))
+            if (masterService == null)
             {
-                using (var myFile = File.Create(filePath)) { };
+                serviceHost.Close();
+                return;
             }
-            using (var xmlWriter = XmlWriter.Create(filePath))
-            {
-                masterService.WriteXml(xmlWriter);
-            }
+            SaveServiceState();
+            serviceHost.Close();
         }
+
         #endregion
 
         #region Private Methods
-        private static List<IUserService> ConfigureSlaves(IEnumerable<ServiceElement> serviceElements)
+
+        private static void ConfigureProxy(ServiceElement proxyElement, IEnumerable<SlaveElement> serviceElements)
         {
             var services = new List<IUserService>();
-            var i = 0;
-            foreach (var si in serviceElements)
+            foreach (var se in serviceElements)
             {
-                var service = CreateServiceInAppDomain($"SlaveServiceDomain{i}", si.Type, GetAddress(si));
-                services.Add(service);
-                i++;
+                ChannelFactory<IUserService> scf;
+                scf = new ChannelFactory<IUserService>(new NetTcpBinding(), $"net.tcp://{GetAddress(se.Host, se.Port).ToString()}");
+                IUserService s;
+                s = scf.CreateChannel();
+                services.Add(s);
             }
-            return services;
+            var address = GetAddress(proxyElement.Host, proxyElement.Port);
+            var service = new ProxyService(address, services);
+            StartWCFService(service, address.ToString());
         }
 
-        private static void ConfigureMaster(ServiceElement master, List<IUserService> services)
+        private static void ConfigureSlave(ServiceElement slaveElement)
         {
-            var serviceAdresses = services.Where(s => s.IsMaster != true).Select(s => (s as UserService).Address).ToList();
+            var address = GetAddress(slaveElement.Host, slaveElement.Port);
+            var service = CreateServiceInAppDomain($"SlaveServiceDomain{slaveElement.Port}", slaveElement.Type, address);
+            StartWCFService(service, address.ToString());
+        }
+
+        private static void ConfigureMaster(ServiceElement masterElement, IEnumerable<SlaveElement> slaveElements)
+        {
+            var serviceAdresses = slaveElements.Select(s => new IPEndPoint(IPAddress.Parse(s.Host), Convert.ToInt32(s.Port))).ToList();
 
             try
             {
-                masterService = kernel.Get(Type.GetType(master.Type, true, false), new ConstructorArgument("address", GetAddress(master)),
+                masterService = kernel.Get(Type.GetType(masterElement.Type, true, false), new ConstructorArgument("address", GetAddress(masterElement.Host, masterElement.Port)),
                     new ConstructorArgument("services", serviceAdresses)) as UserService;
             }
             catch (TypeLoadException ex)
@@ -122,6 +140,20 @@ namespace SystemConfigurator
                 throw;
             }
             LoadServiceState();
+            StartWCFService(masterService, GetAddress(masterElement.Host, masterElement.Port).ToString());
+        }
+
+        private static void SaveServiceState()
+        {
+            var filePath = ConfigurationManager.AppSettings["Path"];
+            if (!File.Exists(filePath))
+            {
+                using (var myFile = File.Create(filePath)) { };
+            }
+            using (var xmlWriter = XmlWriter.Create(filePath))
+            {
+                masterService?.WriteXml(xmlWriter);
+            }
         }
 
         private static void LoadServiceState()
@@ -150,7 +182,10 @@ namespace SystemConfigurator
             {
                 var typeToLoad = kernel.Get(Type.GetType(serviceType, true, false)).GetType().FullName;
                 string assemblyToLoad = Type.GetType(serviceType, true, false).Assembly.FullName;
-                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { generator, validator, repository, address }, null, null) as UserService;
+                var repo = domain.CreateInstanceAndUnwrap(repository.GetType().Assembly.FullName, repository.GetType().FullName);
+                var gen = domain.CreateInstanceAndUnwrap(generator.GetType().Assembly.FullName, generator.GetType().FullName);
+                var val = domain.CreateInstanceAndUnwrap(validator.GetType().Assembly.FullName, validator.GetType().FullName);
+                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { gen, val, repo, address }, null, null) as UserService;
             }
             catch (TypeLoadException ex)
             {
@@ -180,14 +215,24 @@ namespace SystemConfigurator
             return service;
         }
 
-        private static IPEndPoint GetAddress(ServiceElement si)
+        private static IPEndPoint GetAddress(string host, string port)
         {
             IPAddress ip;
-            IPAddress.TryParse(si.Host, out ip);
-            int port;
-            int.TryParse(si.Port, out port);
-            var address = new IPEndPoint(ip, port);
+            IPAddress.TryParse(host, out ip);
+            int p;
+            int.TryParse(port, out p);
+            var address = new IPEndPoint(ip, p);
             return address;
+        }
+
+        private static void StartWCFService(IUserService service, string address)
+        {
+            serviceHost = new ServiceHost(service);
+            var behaviour = serviceHost.Description.Behaviors.Find<ServiceBehaviorAttribute>();
+            behaviour.IncludeExceptionDetailInFaults = true;
+            behaviour.InstanceContextMode = InstanceContextMode.Single;
+            serviceHost.AddServiceEndpoint(typeof(IUserService), new NetTcpBinding(), $"net.tcp://{address}");
+            serviceHost.Open();
         }
         #endregion
     }

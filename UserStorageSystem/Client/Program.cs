@@ -4,27 +4,25 @@ using System.Threading;
 using System.Threading.Tasks;
 using SystemConfigurator;
 using UserStorage;
+using System.ServiceModel;
 
 namespace Client
 {
     class Program
     {
-        static ManualResetEventSlim mres = new ManualResetEventSlim(false);
-
         static void Main(string[] args)
         {
-            var proxy = Configurator.ConfigurateServices();
+            var cf = new ChannelFactory<IUserService>(new NetTcpBinding(), $"net.tcp://127.0.0.1:5555");
+            IUserService proxy = cf.CreateChannel();
+
             Task.Factory.StartNew(() => Searh(proxy, "John", "Smith"));
             Task.Factory.StartNew(() => CreateDelete(proxy));
             Task.Factory.StartNew(() => Delete(proxy));
-            mres.Set();
 
             Console.ReadKey();
-
-            Configurator.SaveServiceState();
         }
 
-        private static void Searh(ProxyService proxy, string name, string lastName)
+        private static void Searh(IUserService proxy, string name, string lastName)
         {
             while (true)
             {
@@ -33,7 +31,7 @@ namespace Client
             }
         }
 
-        private static void CreateDelete(ProxyService proxy)
+        private static void CreateDelete(IUserService proxy)
         {
             var newUser = new User
             {
@@ -43,7 +41,6 @@ namespace Client
                 PersonalId = "12345678901234",
                 Gender = Gender.Male
             };
-            mres.Wait();
             while (true)
             {
                 var user = proxy.CreateUser(newUser);
@@ -54,7 +51,7 @@ namespace Client
             }
         }
 
-        private static void Delete(ProxyService proxy)
+        private static void Delete(IUserService proxy)
         {
             var newUser = new User
             {
@@ -64,7 +61,6 @@ namespace Client
                 PersonalId = "12345678901234",
                 Gender = Gender.Male
             };
-            mres.Wait();
             while (true)
             {
                 proxy.DeleteUser(newUser);

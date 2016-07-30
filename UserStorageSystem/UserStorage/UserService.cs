@@ -79,13 +79,14 @@ namespace UserStorage
         /// </summary>
         public IPEndPoint Address => address;
 
-        /// <summary>
-        /// Gets weather this service is master.
-        /// </summary>
-        public bool IsMaster => isMaster;
         #endregion
 
         #region IUserService Methods
+
+        /// <summary>
+        /// Gets weather this service is master.
+        /// </summary>
+        public bool IsMaster() => isMaster;
         /// <summary>
         /// Creates a new user.
         /// </summary>
@@ -93,7 +94,7 @@ namespace UserStorage
         /// <returns> A new user.</returns>
         public User CreateUser(User user)
         {
-            if (!IsMaster) throw new NotSupportedException();
+            if (!IsMaster()) throw new NotSupportedException();
             if (boolSwitch.Enabled)
             {
                 Trace.TraceInformation($"Create user. {user.ToString()}");
@@ -115,7 +116,7 @@ namespace UserStorage
         /// <param name="user"> user instance.</param>
         public void DeleteUser(User user)
         {
-            if (!IsMaster) throw new NotSupportedException();
+            if (!IsMaster()) throw new NotSupportedException();
             if (boolSwitch.Enabled)
             {
                 Trace.TraceInformation("Delete user. {user.ToString()}");
@@ -131,13 +132,13 @@ namespace UserStorage
         /// </summary>
         /// <param name="name"> User name.</param>
         /// <returns> Collection of users.</returns>
-        public IEnumerable<int> FindByName(string name)
+        public IEnumerable<User> FindByName(string name)
         {
             if (boolSwitch.Enabled)
             {
                 Trace.TraceInformation($"Find user by name = {name}.");
             }
-            return userRepository.Find(u => u.Name == name).Select(u => u.Id).ToList();
+            return userRepository.Find(u => u.Name == name).ToList();
         }
 
         /// <summary>
@@ -146,13 +147,13 @@ namespace UserStorage
         /// <param name="name"> User name.</param>
         /// <param name="lastName"> User last name.</param>
         /// <returns> Collection of users.</returns>
-        public IEnumerable<int> FindByNameAndLastName(string name, string lastName)
+        public IEnumerable<User> FindByNameAndLastName(string name, string lastName)
         {
             if (boolSwitch.Enabled)
             {
                 Trace.TraceInformation($"Find user by name and last name, name = {name}, last name = {lastName}.");
             }
-            return userRepository.Find(u => u.Name == name && u.LastName == lastName).Select(u => u.Id).ToList();
+            return userRepository.Find(u => u.Name == name && u.LastName == lastName).ToList();
         }
 
         /// <summary>
@@ -160,13 +161,13 @@ namespace UserStorage
         /// </summary>
         /// <param name="personalId"></param>
         /// <returns> Collection of users.</returns>
-        public IEnumerable<int> FindByPersonalId(string personalId)
+        public IEnumerable<User> FindByPersonalId(string personalId)
         {
             if (boolSwitch.Enabled)
             {
                 Trace.TraceInformation($"Find user by personalId, personalId = {personalId}.");
             }
-            return userRepository.Find(u => u.PersonalId == personalId).Select(u => u.Id).ToList();
+            return userRepository.Find(u => u.PersonalId == personalId).ToList();
         }
         #endregion
 
@@ -178,10 +179,8 @@ namespace UserStorage
         /// <param name="xmlReader"> XmlReader instance.</param>
         public void ReadXml(XmlReader xmlReader)
         {
-            if (!IsMaster) throw new NotSupportedException();
+            if (!IsMaster()) throw new NotSupportedException();
             var doc = new XDocument();
-            doc.TryLoad(xmlReader, out doc);
-            //var doc = XDocument.TryLoad(xmlReader);
             if (!doc.TryLoad(xmlReader, out doc)) return;
             int.TryParse(doc.Descendants("LastId").SingleOrDefault().Value, out lastUserId);
             var users = new List<User>();
@@ -229,7 +228,7 @@ namespace UserStorage
         /// <param name="filePath"> The path to the xml file.</param>
         public void WriteXml(XmlWriter xmlWriter)
         {
-            if (!IsMaster) throw new NotSupportedException();
+            if (!IsMaster()) throw new NotSupportedException();
             var doc = new XDocument(
                 new XElement(
                     "ServiceState",

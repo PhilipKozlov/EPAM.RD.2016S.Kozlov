@@ -12,6 +12,7 @@ namespace SystemConfigurator
         /// Gets collection of service items from custom section within a configuration file.
         /// </summary>
         [ConfigurationProperty("Services")]
+        //[ConfigurationProperty("", IsDefaultCollection =true)]
         public ServicesCollection ServiceItems
         {
             get { return ((ServicesCollection)(base["Services"])); }

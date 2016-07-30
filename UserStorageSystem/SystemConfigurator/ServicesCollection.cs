@@ -40,7 +40,7 @@ namespace SystemConfigurator
         /// <returns> Element key.</returns>
         protected override object GetElementKey(ConfigurationElement element)
         {
-            return ((ServiceElement)element).Id;
+            return ((ServiceElement)element).Port;
         }
         #endregion
     }

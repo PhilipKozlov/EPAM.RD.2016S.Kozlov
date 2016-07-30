@@ -26,9 +26,11 @@ namespace Validator
             if (!AreVisaRecordsValid(user.VisaRecords)) return false;
             return true;
         }
+
         #endregion
 
         #region Private Methods
+
         private bool HasNonLetters(string str)
         {
             foreach (var c in str) if (!char.IsLetter(c)) return true;
@@ -58,6 +60,7 @@ namespace Validator
             if (HasNonLetters(visa.Country)) return false;
             return true;
         }
+
         #endregion
     }
 }

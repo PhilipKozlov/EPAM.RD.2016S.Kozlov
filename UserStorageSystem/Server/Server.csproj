@@ -4,15 +4,17 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{089BBE2D-F5E5-49FD-8EF8-BA1E16344AD6}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{22ECF8C0-BB16-4699-9829-EFA08894E355}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SystemConfigurator</RootNamespace>
-    <AssemblyName>SystemConfigurator</AssemblyName>
+    <RootNamespace>Server</RootNamespace>
+    <AssemblyName>Server</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +24,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -30,12 +33,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ninject, Version=3.2.0.0, Culture=neutral, PublicKeyToken=c7192dc5380945e7, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ninject.3.2.2.0\lib\net45-full\Ninject.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
-    <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
@@ -46,30 +44,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Configurator.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServiceConfigSection.cs" />
-    <Compile Include="ServiceElement.cs" />
-    <Compile Include="ServicesCollection.cs" />
-    <Compile Include="SlaveCollection.cs" />
-    <Compile Include="SlaveElement.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CompositionRoot\CompositionRoot.csproj">
-      <Project>{4807fefb-ee6e-49da-b050-9162bbc7cf64}</Project>
-      <Name>CompositionRoot</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\IDGenerator\IDGenerator.csproj">
-      <Project>{7A192C03-0F8F-4A5D-BE00-8322A173DF3D}</Project>
-      <Name>IDGenerator</Name>
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SystemConfigurator\SystemConfigurator.csproj">
+      <Project>{089bbe2d-f5e5-49fd-8ef8-ba1e16344ad6}</Project>
+      <Name>SystemConfigurator</Name>
     </ProjectReference>
     <ProjectReference Include="..\UserStorage\UserStorage.csproj">
       <Project>{a9dbba89-cecb-4a7a-b257-41e68eccc2aa}</Project>
       <Name>UserStorage</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

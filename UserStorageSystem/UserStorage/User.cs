@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ServiceModel;
+using System.Runtime.Serialization;
 
 namespace UserStorage
 {
@@ -7,6 +9,7 @@ namespace UserStorage
     /// Represents user entity.
     /// </summary>
     [Serializable]
+    [DataContract]
     public class User : IEquatable<User>
     {
         #region Constructors
@@ -26,36 +29,43 @@ namespace UserStorage
         /// <summary>
         /// User identificator.
         /// </summary>
+        [DataMember]
         public int Id { get; set; }
 
         /// <summary>
         /// User name.
         /// </summary>
+        [DataMember]
         public string Name { get; set; }
 
         /// <summary>
         /// User last name.
         /// </summary>
+        [DataMember]
         public string LastName { get; set; }
 
         /// <summary>
         /// User date of birth.
         /// </summary>
+        [DataMember]
         public DateTime DateOfBirth { get; set; }
 
         /// <summary>
         /// User personal identificator.
         /// </summary>
+        [DataMember]
         public string PersonalId { get; set; }
 
         /// <summary>
         /// User gender.
         /// </summary>
+        [DataMember]
         public Gender Gender { get; set; }
 
         /// <summary>
         /// Collection of user visa records.
         /// </summary>
+        [DataMember]
         public List<VisaRecord> VisaRecords { get; set; }
         #endregion
 
