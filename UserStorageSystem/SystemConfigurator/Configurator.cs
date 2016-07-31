@@ -33,6 +33,7 @@ namespace SystemConfigurator
         private static readonly BooleanSwitch BoolSwitch = new BooleanSwitch("logSwitch", string.Empty);
         private static UserService masterService;
         private static ServiceHost serviceHost;
+        private static string serverRole;
 
         #endregion
 
@@ -44,6 +45,11 @@ namespace SystemConfigurator
             Kernel.Load<Resolver>();
         }
 
+        #endregion
+
+        #region Properties
+
+        public static string ServerRole => serverRole;
         #endregion
 
         #region Public Methods
@@ -59,16 +65,19 @@ namespace SystemConfigurator
                 var serviceElement = section.ServiceItems.Cast<ServiceElement>().SingleOrDefault();
                 if (serviceElement?.Role == "Master")
                 {
+                    serverRole = "Master";
                     var slaveElements = serviceElement.Slaves.Cast<SlaveElement>();
                     ConfigureMaster(serviceElement, slaveElements);
                 }
                 else if (serviceElement?.Role == "Proxy")
                 {
+                    serverRole = "Proxy";
                     var serviceElements = serviceElement.Slaves.Cast<SlaveElement>();
                     ConfigureProxy(serviceElement, serviceElements);
                 }
                 else
                 {
+                    serverRole = "Slave";
                     ConfigureSlave(serviceElement);
                 }
             }

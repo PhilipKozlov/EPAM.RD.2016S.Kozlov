@@ -11,6 +11,7 @@
     {
         private static void Main(string[] args)
         {
+            Console.Title = "Client";
             var cf = new ChannelFactory<IUserService>(new NetTcpBinding(), $"net.tcp://127.0.0.1:5555");
             IUserService proxy = cf.CreateChannel();
 

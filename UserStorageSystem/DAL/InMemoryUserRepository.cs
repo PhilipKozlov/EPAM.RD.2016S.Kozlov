@@ -8,7 +8,6 @@ namespace DAL
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Linq.Expressions;
     using System.Threading;
     using System.Threading.Tasks;
@@ -88,13 +87,12 @@ namespace DAL
                 throw new ArgumentNullException(nameof(filter));
             }
 
-            this.locker.EnterReadLock();
             var result = new List<User>();
+            this.locker.EnterReadLock();
             Parallel.ForEach(
-                this.users, 
+                this.users,
                 user =>
                 {
-                    this.users.Where(filter.Compile());
                     if ((filter.Compile().DynamicInvoke(user) as bool?).GetValueOrDefault())
                     {
                         result.Add(user);

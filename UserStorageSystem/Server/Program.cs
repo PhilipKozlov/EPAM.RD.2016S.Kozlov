@@ -10,7 +10,7 @@
         private static void Main(string[] args)
         {
             Configurator.StartServer();
-            Console.WriteLine("[Server]:running.");
+            Console.Title = $"[Server:{Configurator.ServerRole}]";
             Console.WriteLine("[Server]:press any key to shut down.");
             Console.ReadKey();
             Configurator.ShutDownServer();

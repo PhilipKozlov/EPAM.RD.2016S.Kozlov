@@ -8,6 +8,7 @@ namespace UserStorage
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using System.Net;
 
@@ -18,6 +19,7 @@ namespace UserStorage
     {
         #region Fields
 
+        private static readonly BooleanSwitch BoolSwitch = new BooleanSwitch("logSwitch", string.Empty);
         private readonly IList<IUserService> servicePool;
         private readonly IPEndPoint address;
         private int nextInLine;
@@ -60,6 +62,11 @@ namespace UserStorage
         /// <returns> Id generated for a new user.</returns>
         public User CreateUser(User user)
         {
+            if (BoolSwitch.Enabled)
+            {
+                Trace.TraceInformation($"Create user. {user}");
+            }
+
             return this.servicePool?.SingleOrDefault(s => s.IsMaster())?.CreateUser(user);
         }
 
@@ -69,6 +76,11 @@ namespace UserStorage
         /// <param name="user"> user instance.</param>
         public void DeleteUser(User user)
         {
+            if (BoolSwitch.Enabled)
+            {
+                Trace.TraceInformation($"Delete user. {user}");
+            }
+
             this.servicePool?.SingleOrDefault(s => s.IsMaster())?.DeleteUser(user);
         }
 
@@ -79,6 +91,11 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByName(string name)
         {
+            if (BoolSwitch.Enabled)
+            {
+                Trace.TraceInformation($"Find user by name = {name}.");
+            }
+
             if (this.nextInLine >= this.servicePool.Count)
             {
                 this.nextInLine = 0;
@@ -97,6 +114,11 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByNameAndLastName(string name, string lastName)
         {
+            if (BoolSwitch.Enabled)
+            {
+                Trace.TraceInformation($"Find user by name and last name, name = {name}, last name = {lastName}.");
+            }
+
             if (this.nextInLine >= this.servicePool.Count)
             {
                 this.nextInLine = 0;
@@ -114,6 +136,11 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByPersonalId(string personalId)
         {
+            if (BoolSwitch.Enabled)
+            {
+                Trace.TraceInformation($"Find user by personalId, personalId = {personalId}.");
+            }
+
             if (this.nextInLine >= this.servicePool.Count)
             {
                 this.nextInLine = 0;
