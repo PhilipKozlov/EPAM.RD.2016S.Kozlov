@@ -1,4 +1,10 @@
-﻿namespace UserStorage
+﻿//-----------------------------------------------------------------------
+// <copyright file="IUserValidator.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace UserStorage
 {
     /// <summary>
     /// Provides a way for validation users.

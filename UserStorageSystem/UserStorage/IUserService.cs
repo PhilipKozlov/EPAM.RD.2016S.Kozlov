@@ -1,8 +1,14 @@
-﻿using System.Collections.Generic;
-using System.ServiceModel;
+﻿//-----------------------------------------------------------------------
+// <copyright file="IUserService.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace UserStorage
 {
+    using System.Collections.Generic;
+    using System.ServiceModel;
+
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
@@ -12,8 +18,10 @@ namespace UserStorage
         /// <summary>
         /// Gets weather this service is master.
         /// </summary>
+        /// <returns> True if master; otherwise - false.</returns>
         [OperationContract]
         bool IsMaster();
+
         /// <summary>
         /// Creates a new user.
         /// </summary>
@@ -21,12 +29,14 @@ namespace UserStorage
         /// <returns> A new user.</returns>
         [OperationContract]
         User CreateUser(User user);
+
         /// <summary>
         /// Deletes user from storage.
         /// </summary>
         /// <param name="user"> user instance.</param>
         [OperationContract]
         void DeleteUser(User user);
+
         /// <summary>
         /// Performs a search for user by specified user name.
         /// </summary>
@@ -34,6 +44,7 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         [OperationContract]
         IEnumerable<User> FindByName(string name);
+
         /// <summary>
         /// Performs a search for user by specified user name and last name.
         /// </summary>
@@ -42,10 +53,11 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         [OperationContract]
         IEnumerable<User> FindByNameAndLastName(string name, string lastName);
+
         /// <summary>
         /// Performs a search for user by specified personal id.
         /// </summary>
-        /// <param name="personalId"></param>
+        /// <param name="personalId"> User personal id.</param>
         /// <returns> Collection of users.</returns>
         [OperationContract]
         IEnumerable<User> FindByPersonalId(string personalId);

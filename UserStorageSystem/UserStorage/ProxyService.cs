@@ -1,39 +1,56 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ProxyService.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace UserStorage
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Net;
+
     /// <summary>
     /// Simple proxy, that uses Round-Robin algorithm to distribute load between services.
     /// </summary>
     public class ProxyService : IUserService
     {
         #region Fields
+
         private readonly IList<IUserService> servicePool;
+        private readonly IPEndPoint address;
         private int nextInLine;
-        IPEndPoint address;
+
         #endregion
 
         #region Constructors
+
         /// <summary>
-        /// Instanciates ProxyUserService with specified parameters.
+        /// Initializes a new instance of the <see cref="ProxyService"/> class.
         /// </summary>
+        /// <param name="address"> Proxy address.</param>
         /// <param name="services"> Collection of services.</param>
         public ProxyService(IPEndPoint address, IList<IUserService> services)
         {
-            if (services == null) throw new ArgumentNullException(nameof(services));
-            servicePool = services;
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            this.servicePool = services;
             this.address = address;
-            nextInLine = 0;
+            this.nextInLine = 0;
         }
+
         #endregion
 
         #region IUserService Methods
+
         /// <summary>
         /// Gets weather this service is master.
         /// </summary>
+        /// <returns> True if master; otherwise - false.</returns>
         public bool IsMaster() => false;
 
         /// <summary>
@@ -43,7 +60,7 @@ namespace UserStorage
         /// <returns> Id generated for a new user.</returns>
         public User CreateUser(User user)
         {
-            return servicePool.SingleOrDefault(s => s.IsMaster()).CreateUser(user);
+            return this.servicePool?.SingleOrDefault(s => s.IsMaster())?.CreateUser(user);
         }
 
         /// <summary>
@@ -52,7 +69,7 @@ namespace UserStorage
         /// <param name="user"> user instance.</param>
         public void DeleteUser(User user)
         {
-            servicePool.SingleOrDefault(s => s.IsMaster()).DeleteUser(user);
+            this.servicePool?.SingleOrDefault(s => s.IsMaster())?.DeleteUser(user);
         }
 
         /// <summary>
@@ -62,9 +79,13 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByName(string name)
         {
-            if (nextInLine >= servicePool.Count) nextInLine = 0;
-            var result = servicePool[nextInLine].FindByName(name);
-            nextInLine++;
+            if (this.nextInLine >= this.servicePool.Count)
+            {
+                this.nextInLine = 0;
+            }
+
+            var result = this.servicePool[this.nextInLine].FindByName(name);
+            this.nextInLine++;
             return result;
         }
 
@@ -76,22 +97,30 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByNameAndLastName(string name, string lastName)
         {
-            if (nextInLine >= servicePool.Count) nextInLine = 0;
-            var result = servicePool[nextInLine].FindByNameAndLastName(name, lastName);
-            nextInLine++;
+            if (this.nextInLine >= this.servicePool.Count)
+            {
+                this.nextInLine = 0;
+            }
+
+            var result = this.servicePool[this.nextInLine].FindByNameAndLastName(name, lastName);
+            this.nextInLine++;
             return result;
         }
 
         /// <summary>
         /// Performs a search for user by specified personal id.
         /// </summary>
-        /// <param name="personalId"></param>
+        /// <param name="personalId"> User personal id.</param>
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByPersonalId(string personalId)
         {
-            if (nextInLine >= servicePool.Count) nextInLine = 0;
-            var result = servicePool[nextInLine].FindByPersonalId(personalId);
-            nextInLine++;
+            if (this.nextInLine >= this.servicePool.Count)
+            {
+                this.nextInLine = 0;
+            }
+
+            var result = this.servicePool[this.nextInLine].FindByPersonalId(personalId);
+            this.nextInLine++;
             return result;
         }
 

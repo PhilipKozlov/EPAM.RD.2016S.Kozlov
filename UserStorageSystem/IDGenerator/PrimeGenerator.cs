@@ -1,9 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PrimeGenerator.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace IDGenerator
 {
+    using System;
+
     /// <summary>
-    ///     Provides methods for generating prime numbers.
+    /// Provides methods for generating prime numbers.
     /// </summary>
     [Serializable]
     public class PrimeGenerator : IGenerator<int>
@@ -11,13 +17,18 @@ namespace IDGenerator
         #region IGenerator methods
 
         /// <summary>
-        ///     Generates single id.
+        /// Generates single id.
         /// </summary>
-        /// <returns> Int32 identificator.</returns>
+        /// <param name="prevId"> Previously generated id.</param>
+        /// <returns> 32 bit integer representing Id.</returns>
         public int GenerateId(int prevId)
         {
-            if (prevId < 0) throw new ArgumentOutOfRangeException(nameof(prevId));
-            return GeneratePrime(prevId);
+            if (prevId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(prevId));
+            }
+
+            return this.GeneratePrime(prevId);
         }
 
         #endregion
@@ -30,16 +41,20 @@ namespace IDGenerator
             {
                 var isPrime = true;
                 ++number;
-                var sqrt = (int) Math.Sqrt(number);
+                var sqrt = (int)Math.Sqrt(number);
                 for (var i = 2; i <= sqrt; i++)
                 {
-                    if (number%i == 0)
+                    if (number % i == 0)
                     {
                         isPrime = false;
                         break;
                     }
                 }
-                if (isPrime) return number;
+
+                if (isPrime)
+                {
+                    return number;
+                }
             }
         }
 

@@ -1,9 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
+﻿//-----------------------------------------------------------------------
+// <copyright file="IUserRepository.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace UserStorage
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq.Expressions;
+
     /// <summary>
     /// Represents common functionality for accessing user storage.
     /// </summary>
@@ -12,18 +18,21 @@ namespace UserStorage
         /// <summary>
         /// Gets all users in the storage.
         /// </summary>
-        /// <returns></returns>
+        /// <returns> List of users.</returns>
         IList<User> GetAll();
+
         /// <summary>
         /// Creates a new user.
         /// </summary>
         /// <param name="user"> User instance.</param>
         void Create(User user);
+
         /// <summary>
         /// Deletes user from storage.
         /// </summary>
         /// <param name="user"> User instance.</param>
         void Delete(User user);
+
         /// <summary>
         /// Performs a search for user using specified filter.
         /// </summary>

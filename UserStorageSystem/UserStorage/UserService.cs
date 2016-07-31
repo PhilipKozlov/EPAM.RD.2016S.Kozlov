@@ -1,73 +1,87 @@
-﻿using IDGenerator;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
-using System.Xml.Schema;
-using System.Xml.Serialization;
-
+﻿//-----------------------------------------------------------------------
+// <copyright file="UserService.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace UserStorage
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Sockets;
+    using System.Threading.Tasks;
+    using System.Xml;
+    using System.Xml.Linq;
+    using System.Xml.Schema;
+    using System.Xml.Serialization;
+    using IDGenerator;
+
     /// <summary>
     /// Provides functionality for working with users.
     /// </summary>
     public class UserService : MarshalByRefObject, IUserService, IXmlSerializable
     {
         #region Fields
+
+        private static readonly BooleanSwitch BoolSwitch = new BooleanSwitch("logSwitch", string.Empty);
+        private readonly bool isMaster;
         private readonly IGenerator<int> idGenerator;
         private readonly IUserValidator userValidator;
         private readonly IUserRepository userRepository;
-        private IPEndPoint address;
-        private List<IPEndPoint> services;
+        private readonly IPEndPoint address;
+        private readonly List<IPEndPoint> services;
         private int lastUserId;
-        private bool isMaster;
 
-        private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
         #endregion
 
         #region Constructors
+
         /// <summary>
-        /// Instanciates MasterUserService.
+        /// Initializes a new instance of the <see cref="UserService"/> class.
         /// </summary>
         public UserService()
         {
-            services = new List<IPEndPoint>();
+            this.services = new List<IPEndPoint>();
         }
 
         /// <summary>
-        /// Instanciates UserService with specified parameters.
+        /// Initializes a new instance of the <see cref="UserService"/> class.
         /// </summary>
         /// <param name="idGenerator"> IGenerator` instance.</param>
         /// <param name="userValidator"> UserValidator instance.</param>
         /// <param name="userRepository"> UserRepository instance.</param>
+        /// <param name="address"> Service address.</param>
         public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository, IPEndPoint address) : this()
         {
             this.idGenerator = idGenerator;
             this.userValidator = userValidator;
             this.userRepository = userRepository;
             this.address = address;
-            StartListener();
+            this.StartListener();
         }
 
         /// <summary>
-        /// Instanciates UserService with specified parameters.
+        /// Initializes a new instance of the <see cref="UserService"/> class.
         /// </summary>
         /// <param name="idGenerator"> IGenerator` instance.</param>
         /// <param name="userValidator"> UserValidator instance.</param>
         /// <param name="userRepository"> UserRepository instance.</param>
+        /// <param name="address"> Service address.</param>
+        /// <param name="services"> Collection of slave services.</param>
         public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository, IPEndPoint address, List<IPEndPoint> services) 
             : this(idGenerator, userValidator, userRepository, address)
         {
-            if (services == null) throw new ArgumentNullException(nameof(services));
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
             this.services = services;
-            isMaster = true;
+            this.isMaster = true;
         }
 
         #endregion
@@ -77,7 +91,7 @@ namespace UserStorage
         /// <summary>
         /// Service address.
         /// </summary>
-        public IPEndPoint Address => address;
+        public IPEndPoint Address => this.address;
 
         #endregion
 
@@ -86,7 +100,9 @@ namespace UserStorage
         /// <summary>
         /// Gets weather this service is master.
         /// </summary>
-        public bool IsMaster() => isMaster;
+        /// <returns> True if service is master; otherwise - false;</returns>
+        public bool IsMaster() => this.isMaster;
+
         /// <summary>
         /// Creates a new user.
         /// </summary>
@@ -94,19 +110,27 @@ namespace UserStorage
         /// <returns> A new user.</returns>
         public User CreateUser(User user)
         {
-            if (!IsMaster()) throw new NotSupportedException();
-            if (boolSwitch.Enabled)
+            if (!this.IsMaster())
             {
-                Trace.TraceInformation($"Create user. {user.ToString()}");
+                throw new NotSupportedException();
             }
 
-            if (!userValidator.IsValid(user)) throw new ArgumentException(nameof(user));
-            lastUserId = idGenerator.GenerateId(lastUserId);
-            user.Id = lastUserId;
-            userRepository.Create(user);
+            if (BoolSwitch.Enabled)
+            {
+                Trace.TraceInformation($"Create user. {user}");
+            }
 
-            var message = new StorageChangedMessage() { IsAdded = true, User = user };
-            NotifySlaves(message);
+            if (!this.userValidator.IsValid(user))
+            {
+                throw new ArgumentException(nameof(user));
+            }
+
+            this.lastUserId = this.idGenerator.GenerateId(this.lastUserId);
+            user.Id = this.lastUserId;
+            this.userRepository.Create(user);
+
+            var message = new StorageChangedMessage { IsAdded = true, User = user };
+            this.NotifySlaves(message);
             return user;
         }
 
@@ -116,15 +140,20 @@ namespace UserStorage
         /// <param name="user"> user instance.</param>
         public void DeleteUser(User user)
         {
-            if (!IsMaster()) throw new NotSupportedException();
-            if (boolSwitch.Enabled)
+            if (!this.IsMaster())
+            {
+                throw new NotSupportedException();
+            }
+
+            if (BoolSwitch.Enabled)
             {
                 Trace.TraceInformation("Delete user. {user.ToString()}");
             }
-            userRepository.Delete(user);
 
-            var message = new StorageChangedMessage() { IsRemoved = true, User = user };
-            NotifySlaves(message);
+            this.userRepository.Delete(user);
+
+            var message = new StorageChangedMessage { IsRemoved = true, User = user };
+            this.NotifySlaves(message);
         }
 
         /// <summary>
@@ -134,11 +163,12 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByName(string name)
         {
-            if (boolSwitch.Enabled)
+            if (BoolSwitch.Enabled)
             {
                 Trace.TraceInformation($"Find user by name = {name}.");
             }
-            return userRepository.Find(u => u.Name == name).ToList();
+
+            return this.userRepository.Find(u => u.Name == name).ToList();
         }
 
         /// <summary>
@@ -149,25 +179,27 @@ namespace UserStorage
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByNameAndLastName(string name, string lastName)
         {
-            if (boolSwitch.Enabled)
+            if (BoolSwitch.Enabled)
             {
                 Trace.TraceInformation($"Find user by name and last name, name = {name}, last name = {lastName}.");
             }
-            return userRepository.Find(u => u.Name == name && u.LastName == lastName).ToList();
+
+            return this.userRepository.Find(u => u.Name == name && u.LastName == lastName).ToList();
         }
 
         /// <summary>
         /// Performs a search for user by specified personal id.
         /// </summary>
-        /// <param name="personalId"></param>
+        /// <param name="personalId"> User personal id.</param>
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> FindByPersonalId(string personalId)
         {
-            if (boolSwitch.Enabled)
+            if (BoolSwitch.Enabled)
             {
                 Trace.TraceInformation($"Find user by personalId, personalId = {personalId}.");
             }
-            return userRepository.Find(u => u.PersonalId == personalId).ToList();
+
+            return this.userRepository.Find(u => u.PersonalId == personalId).ToList();
         }
         #endregion
 
@@ -179,11 +211,19 @@ namespace UserStorage
         /// <param name="xmlReader"> XmlReader instance.</param>
         public void ReadXml(XmlReader xmlReader)
         {
-            if (!IsMaster()) throw new NotSupportedException();
+            if (!this.IsMaster())
+            {
+                throw new NotSupportedException();
+            }
+
             var doc = new XDocument();
-            if (!doc.TryLoad(xmlReader, out doc)) return;
-            int.TryParse(doc.Descendants("LastId").SingleOrDefault().Value, out lastUserId);
-            var users = new List<User>();
+            if (!doc.TryLoad(xmlReader, out doc))
+            {
+                return;
+            }
+
+            int.TryParse(doc.Descendants("LastId").SingleOrDefault().Value, out this.lastUserId);
+            List<User> users;
             try
             {
                 users = doc.Descendants("User").Select(u => new User
@@ -201,41 +241,47 @@ namespace UserStorage
                         End = Convert.ToDateTime(vr.Element("Start").Value),
                     }).ToList()
                 }).ToList();
-
             }
             catch (InvalidOperationException ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
             catch (Exception ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
-            InitUsers(users);
+
+            this.InitUsers(users);
         }
 
         /// <summary>
         /// Converts an object into its XML representation.
         /// </summary>
-        /// <param name="filePath"> The path to the xml file.</param>
+        /// <param name="xmlWriter"> XmlWriter instance.</param>
         public void WriteXml(XmlWriter xmlWriter)
         {
-            if (!IsMaster()) throw new NotSupportedException();
+            if (!this.IsMaster())
+            {
+                throw new NotSupportedException();
+            }
+
             var doc = new XDocument(
                 new XElement(
                     "ServiceState",
-                     new XElement("LastId", lastUserId),
+                     new XElement("LastId", this.lastUserId),
                      new XElement(
-                         "Users", 
-                         userRepository.GetAll().Select(
+                         "Users",
+                         this.userRepository.GetAll().Select(
                              u => new XElement(
                                  "User",
                                   new XElement("Id", u.Id),
@@ -258,18 +304,20 @@ namespace UserStorage
             }
             catch (InvalidOperationException ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
             catch (Exception ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
         }
@@ -281,13 +329,11 @@ namespace UserStorage
         {
             foreach (var u in users)
             {
-                userRepository.Create(u);
-                var message = new StorageChangedMessage() { IsAdded = true, User = u };
-                NotifySlaves(message);
+                this.userRepository.Create(u);
+                var message = new StorageChangedMessage { IsAdded = true, User = u };
+                this.NotifySlaves(message);
             }
         }
-
-        XmlSchema IXmlSerializable.GetSchema() => null;
 
         private void StartListener()
         {
@@ -305,9 +351,8 @@ namespace UserStorage
                         var byteCount = await networkStream.ReadAsync(buffer, 0, buffer.Length);
                         var serializer = new XmlSerializer(typeof(StorageChangedMessage));
                         var message = serializer.Deserialize(new MemoryStream(buffer)) as StorageChangedMessage;
-                        UpdateData(message);
+                        this.UpdateData(message);
                     }
-
                 }
             });
         }
@@ -339,9 +384,19 @@ namespace UserStorage
 
         private void UpdateData(StorageChangedMessage message)
         {
-            if (message.IsAdded) userRepository.Create(message.User);
-            if (message.IsRemoved) userRepository.Delete(message.User);
+            if (message.IsAdded)
+            {
+                this.userRepository.Create(message.User);
+            }
+
+            if (message.IsRemoved)
+            {
+                this.userRepository.Delete(message.User);
+            }
         }
+
+        XmlSchema IXmlSerializable.GetSchema() => null;
+
         #endregion
     }
 }

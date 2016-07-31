@@ -1,8 +1,14 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Gender.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace UserStorage
 {
+    using System;
+    using System.Runtime.Serialization;
+
     /// <summary>
     /// Enumeration of possible user genders.
     /// </summary>

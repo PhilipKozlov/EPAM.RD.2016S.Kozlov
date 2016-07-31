@@ -1,32 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
-using UserStorage;
+﻿//-----------------------------------------------------------------------
+// <copyright file="InMemoryUserRepository.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace DAL
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Linq.Expressions;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using UserStorage;
+
     /// <summary>
-    ///     Represents common functionality for accessing user storage.
+    /// Represents common functionality for accessing user storage.
     /// </summary>
     [Serializable]
     public class InMemoryUserRepository : MarshalByRefObject, IUserRepository, IDisposable
     {
-        #region Constructors
-
-        /// <summary>
-        ///     Instanciates InMemoryUserRepository.
-        /// </summary>
-        public InMemoryUserRepository()
-        {
-            locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
-            users = new List<User>();
-        }
-
-        #endregion
-
         #region Fields
 
         private readonly List<User> users;
@@ -34,72 +27,90 @@ namespace DAL
 
         #endregion
 
+        #region Constructors
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InMemoryUserRepository"/> class.
+        /// </summary>
+        public InMemoryUserRepository()
+        {
+            this.locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
+            this.users = new List<User>();
+        }
+
+        #endregion
+
         #region Public Methods
 
         /// <summary>
-        ///     Gets all users in the storage.
+        /// Gets all users in the storage.
         /// </summary>
-        /// <returns></returns>
+        /// <returns> List of users.</returns>
         public IList<User> GetAll()
         {
-            locker.EnterReadLock();
+            this.locker.EnterReadLock();
             var users = this.users;
-            locker.ExitReadLock();
+            this.locker.ExitReadLock();
             return users;
         }
 
         /// <summary>
-        ///     Creates a new user.
+        /// Creates a new user.
         /// </summary>
         /// <param name="user"> User instance.</param>
         public void Create(User user)
         {
-            locker.EnterWriteLock();
-            users.Add(user);
-            locker.ExitWriteLock();
+            this.locker.EnterWriteLock();
+            this.users.Add(user);
+            this.locker.ExitWriteLock();
         }
 
         /// <summary>
-        ///     Deletes user from storage.
+        /// Deletes user from storage.
         /// </summary>
         /// <param name="user"> User instance.</param>
         public void Delete(User user)
         {
-            locker.EnterWriteLock();
-            users.Remove(user);
-            locker.ExitWriteLock();
+            this.locker.EnterWriteLock();
+            this.users.Remove(user);
+            this.locker.ExitWriteLock();
         }
 
         /// <summary>
-        ///     Performs a search for user using specified filter.
+        /// Performs a search for user using specified filter.
         /// </summary>
         /// <param name="filter"> Search criteria.</param>
         /// <returns> Collection of users.</returns>
         public IEnumerable<User> Find(Expression<Func<User, bool>> filter)
         {
-            if (filter == null) throw new ArgumentNullException(nameof(filter));
-            locker.EnterReadLock();
-
-            var result = new List<User>();
-            Parallel.ForEach(users, user =>
+            if (filter == null)
             {
-                users.Where(filter.Compile());
-                if ((filter.Compile().DynamicInvoke(user) as bool?).GetValueOrDefault())
+                throw new ArgumentNullException(nameof(filter));
+            }
+
+            this.locker.EnterReadLock();
+            var result = new List<User>();
+            Parallel.ForEach(
+                this.users, 
+                user =>
                 {
-                    result.Add(user);
-                }
-            });
-            locker.ExitReadLock();
+                    this.users.Where(filter.Compile());
+                    if ((filter.Compile().DynamicInvoke(user) as bool?).GetValueOrDefault())
+                    {
+                        result.Add(user);
+                    }
+                });
+            this.locker.ExitReadLock();
             return result;
         }
 
         /// <summary>
-        ///     Performs application-defined tasks associated with freeing, releasing, or resetting
-        ///     unmanaged resources.
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting
+        /// unmanaged resources.
         /// </summary>
         public void Dispose()
         {
-            locker.Dispose();
+            this.locker.Dispose();
         }
 
         #endregion

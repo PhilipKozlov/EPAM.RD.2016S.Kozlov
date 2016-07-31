@@ -1,8 +1,14 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿//-----------------------------------------------------------------------
+// <copyright file="VisaRecord.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace UserStorage
 {
+    using System;
+    using System.Runtime.Serialization;
+
     /// <summary>
     /// Contains Visa information.
     /// </summary>
@@ -11,23 +17,25 @@ namespace UserStorage
     public struct VisaRecord
     {
         #region Properties
+
         /// <summary>
-        /// Country for visa.
+        /// Gets or sets Country for visa.
         /// </summary>
         [DataMember]
         public string Country { get; set; }
 
         /// <summary>
-        /// Visa start date.
+        /// Gets or sets Visa start date.
         /// </summary>
         [DataMember]
         public DateTime Start { get; set; }
 
         /// <summary>
-        /// Visa end date.
+        /// Gets or sets Visa end date.
         /// </summary>
         [DataMember]
         public DateTime End { get; set; }
+
         #endregion
     }
 }

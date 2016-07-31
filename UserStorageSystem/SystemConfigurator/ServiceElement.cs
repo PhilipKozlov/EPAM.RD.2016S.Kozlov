@@ -1,7 +1,13 @@
-﻿using System.Configuration;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ServiceElement.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace SystemConfigurator
 {
+    using System.Configuration;
+
     /// <summary>
     /// Represents a service configuration element within a configuration file.
     /// </summary>
@@ -18,27 +24,12 @@ namespace SystemConfigurator
             {
                 return (string)base["type"];
             }
+
             set
             {
                 base["type"] = value;
             }
         }
-
-        ///// <summary>
-        ///// Gets or sets service id.
-        ///// </summary>
-        //[ConfigurationProperty("id", DefaultValue = "", IsKey = true, IsRequired = true)]
-        //public string Id
-        //{
-        //    get
-        //    {
-        //        return (string)base["id"];
-        //    }
-        //    set
-        //    {
-        //        base["id"] = value;
-        //    }
-        //}
 
         /// <summary>
         /// Gets or sets service Role.
@@ -50,6 +41,7 @@ namespace SystemConfigurator
             {
                 return (string)base["role"];
             }
+
             set
             {
                 base["role"] = value;
@@ -66,6 +58,7 @@ namespace SystemConfigurator
             {
                 return (string)base["host"];
             }
+
             set
             {
                 base["host"] = value;
@@ -82,17 +75,19 @@ namespace SystemConfigurator
             {
                 return (string)base["port"];
             }
+
             set
             {
                 base["port"] = value;
             }
         }
 
+        /// <summary>
+        /// Gets service Slaves collection.
+        /// </summary>
         [ConfigurationProperty("Slaves", IsDefaultCollection = false, IsRequired = false)]
-        public SlaveCollection Slaves
-        {
-            get { return (SlaveCollection)base["Slaves"]; }
-        }
+        public SlaveCollection Slaves => (SlaveCollection)base["Slaves"];
+
         #endregion
     }
 }

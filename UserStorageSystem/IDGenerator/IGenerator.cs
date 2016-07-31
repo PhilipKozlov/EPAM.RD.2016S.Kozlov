@@ -1,8 +1,15 @@
-﻿namespace IDGenerator
+﻿//-----------------------------------------------------------------------
+// <copyright file="IGenerator.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace IDGenerator
 {
     /// <summary>
     /// Defines common methods for generating id.
     /// </summary>
+    /// <typeparam name="T"> Type of the generated object.</typeparam>
     public interface IGenerator<T>
     {
         /// <summary>

@@ -1,7 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="StorageChangedMessage.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace UserStorage
 {
+    using System;
+
     /// <summary>
     /// Contains information about change in user storage.
     /// </summary>
@@ -9,18 +15,22 @@ namespace UserStorage
     public class StorageChangedMessage
     {
         #region Properties
+
         /// <summary>
-        /// User instance.
+        /// Gets or sets User instance.
         /// </summary>
         public User User { get; set; }
+
         /// <summary>
-        /// True if user has been removed; otherwise - false.
+        /// Gets or sets a value indicating whether user was removed.
         /// </summary>
         public bool IsRemoved { get; set; }
+
         /// <summary>
-        /// True if user has been added; otherwise - false.
+        /// Gets or sets a value indicating whether user was added.
         /// </summary>
         public bool IsAdded { get; set; }
+
         #endregion
     }
 }

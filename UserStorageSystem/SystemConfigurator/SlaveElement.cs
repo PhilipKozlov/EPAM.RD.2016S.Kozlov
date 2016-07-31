@@ -1,12 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SlaveElement.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace SystemConfigurator
 {
+    using System.Configuration;
+
+    /// <summary>
+    /// Represents a service configuration element within a configuration file.
+    /// </summary>
     internal class SlaveElement : ConfigurationElement
     {
         #region Properties
@@ -21,6 +25,7 @@ namespace SystemConfigurator
             {
                 return (string)base["host"];
             }
+
             set
             {
                 base["host"] = value;
@@ -37,11 +42,13 @@ namespace SystemConfigurator
             {
                 return (string)base["port"];
             }
+
             set
             {
                 base["port"] = value;
             }
         }
+
         #endregion
     }
 }

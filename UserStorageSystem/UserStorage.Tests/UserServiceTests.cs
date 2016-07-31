@@ -12,17 +12,17 @@ namespace UserStorage.Tests
     [TestClass]
     public class UserServiceTests
     {
-        private IUserRepository userRepository = new InMemoryUserRepository();
-        private IGenerator<int> idGenerator = new PrimeGenerator();
-        private IUserValidator userValidator = new UserValidator();
-        private IPEndPoint address = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 1111);
+        private readonly IUserRepository userRepository = new InMemoryUserRepository();
+        private readonly IGenerator<int> idGenerator = new PrimeGenerator();
+        private readonly IUserValidator userValidator = new UserValidator();
+        private readonly IPEndPoint address = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 1111);
 
 
         [TestMethod]
         public void CreateUser_NewUser_ReturnOne()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
-            var user = new User()
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, new List<IPEndPoint>());
+            var user = new User
             {
                 Name = "John",
                 LastName = "Doe",
@@ -36,24 +36,24 @@ namespace UserStorage.Tests
         [TestMethod]
         public void DeleteUser_ExistingUser_UserDeleted()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
-            var user = new User()
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, new List<IPEndPoint>());
+            var user = new User
             {
                 Name = "John",
                 LastName = "Doe",
                 PersonalId = "12345678901234"
             };
             var expected = 0;
-            var actual = userService.CreateUser(user);
+            userService.CreateUser(user);
             userService.DeleteUser(user);
-            Assert.AreEqual(expected, userRepository.GetAll().Count());
+            Assert.AreEqual(expected, userRepository.GetAll().Count);
         }
 
         [TestMethod]
         public void FindByName_John_ReturnIEnumerableOfOneUser()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
-            var user = new User()
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, new List<IPEndPoint>());
+            var user = new User
             {
                 Name = "John",
                 LastName = "Doe",
@@ -67,8 +67,8 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByNameAndLastName_JohnDoe_ReturnIEnumerableOfOneUser()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
-            var user = new User()
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, new List<IPEndPoint>());
+            var user = new User
             {
                 Name = "John",
                 LastName = "Doe",
@@ -82,8 +82,8 @@ namespace UserStorage.Tests
         [TestMethod]
         public void FindByPersonalId_12345678901234_ReturnIEnumerableOfOneUser()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository, address, new List<IPEndPoint>());
-            var user = new User()
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, new List<IPEndPoint>());
+            var user = new User
             {
                 Name = "John",
                 LastName = "Doe",
@@ -98,15 +98,15 @@ namespace UserStorage.Tests
         [ExpectedException(typeof(NotSupportedException))]
         public void CreateUser_NewUser_NotSupportedException()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository, address);
-            var actual = userService.CreateUser(new User());
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address);
+            userService.CreateUser(new User());
         }
 
         [TestMethod]
         [ExpectedException(typeof(NotSupportedException))]
         public void DeleteUser_User_NotSupportedException()
         {
-            var userService = new UserService(idGenerator, userValidator, userRepository, address);
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address);
             userService.DeleteUser(new User());
         }
 

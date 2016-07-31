@@ -1,16 +1,15 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using SystemConfigurator;
-using UserStorage;
-using System.ServiceModel;
-
-namespace Client
+﻿namespace Client
 {
-    class Program
+    using System;
+    using System.Linq;
+    using System.ServiceModel;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using UserStorage;
+
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             var cf = new ChannelFactory<IUserService>(new NetTcpBinding(), $"net.tcp://127.0.0.1:5555");
             IUserService proxy = cf.CreateChannel();

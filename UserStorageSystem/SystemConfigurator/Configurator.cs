@@ -1,44 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using UserStorage;
-using Ninject;
-using System.Reflection;
-using CompositionRoot;
-using System.Xml;
-using System.IO;
-using IDGenerator;
-using System.Diagnostics;
-using System.Net;
-using Ninject.Parameters;
-using System.ServiceModel;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Configurator.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace SystemConfigurator
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Configuration;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Reflection;
+    using System.ServiceModel;
+    using System.Xml;
+    using CompositionRoot;
+    using IDGenerator;
+    using Ninject;
+    using Ninject.Parameters;
+    using UserStorage;
+
     /// <summary>
     /// Configures services.
     /// </summary>
     public static class Configurator
     {
         #region Fields
-        private static UserService masterService;
-        private static readonly StandardKernel kernel;
-        private static readonly BooleanSwitch boolSwitch = new BooleanSwitch("logSwitch", string.Empty);
 
-        static ServiceHost serviceHost;
+        private static readonly StandardKernel Kernel;
+        private static readonly BooleanSwitch BoolSwitch = new BooleanSwitch("logSwitch", string.Empty);
+        private static UserService masterService;
+        private static ServiceHost serviceHost;
 
         #endregion
 
         #region Type Initializer
+
         static Configurator()
         {
-            kernel = new StandardKernel();
-            kernel.Load<Resolver>();
+            Kernel = new StandardKernel();
+            Kernel.Load<Resolver>();
         }
+
         #endregion
 
         #region Public Methods
+
         /// <summary>
         /// Starts server.
         /// </summary>
@@ -48,12 +57,12 @@ namespace SystemConfigurator
             if (section != null)
             {
                 var serviceElement = section.ServiceItems.Cast<ServiceElement>().SingleOrDefault();
-                if (serviceElement.Role == "Master")
+                if (serviceElement?.Role == "Master")
                 {
                     var slaveElements = serviceElement.Slaves.Cast<SlaveElement>();
                     ConfigureMaster(serviceElement, slaveElements);
                 }
-                else if (serviceElement.Role == "Proxy")
+                else if (serviceElement?.Role == "Proxy")
                 {
                     var serviceElements = serviceElement.Slaves.Cast<SlaveElement>();
                     ConfigureProxy(serviceElement, serviceElements);
@@ -75,6 +84,7 @@ namespace SystemConfigurator
                 serviceHost.Close();
                 return;
             }
+
             SaveServiceState();
             serviceHost.Close();
         }
@@ -88,22 +98,21 @@ namespace SystemConfigurator
             var services = new List<IUserService>();
             foreach (var se in serviceElements)
             {
-                ChannelFactory<IUserService> scf;
-                scf = new ChannelFactory<IUserService>(new NetTcpBinding(), $"net.tcp://{GetAddress(se.Host, se.Port).ToString()}");
-                IUserService s;
-                s = scf.CreateChannel();
+                var cf = new ChannelFactory<IUserService>(new NetTcpBinding(), $"net.tcp://{GetAddress(se.Host, se.Port)}");
+                IUserService s = cf.CreateChannel();
                 services.Add(s);
             }
+
             var address = GetAddress(proxyElement.Host, proxyElement.Port);
             var service = new ProxyService(address, services);
-            StartWCFService(service, address.ToString());
+            StartWcfService(service, address.ToString());
         }
 
         private static void ConfigureSlave(ServiceElement slaveElement)
         {
             var address = GetAddress(slaveElement.Host, slaveElement.Port);
             var service = CreateServiceInAppDomain($"SlaveServiceDomain{slaveElement.Port}", slaveElement.Type, address);
-            StartWCFService(service, address.ToString());
+            StartWcfService(service, address.ToString());
         }
 
         private static void ConfigureMaster(ServiceElement masterElement, IEnumerable<SlaveElement> slaveElements)
@@ -112,35 +121,41 @@ namespace SystemConfigurator
 
             try
             {
-                masterService = kernel.Get(Type.GetType(masterElement.Type, true, false), new ConstructorArgument("address", GetAddress(masterElement.Host, masterElement.Port)),
+                masterService = Kernel.Get(
+                    Type.GetType(masterElement.Type, true, false), 
+                    new ConstructorArgument("address", GetAddress(masterElement.Host, masterElement.Port)),
                     new ConstructorArgument("services", serviceAdresses)) as UserService;
             }
             catch (TypeLoadException ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
             catch (FileLoadException ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
             catch (Exception ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
+
             LoadServiceState();
-            StartWCFService(masterService, GetAddress(masterElement.Host, masterElement.Port).ToString());
+            StartWcfService(masterService, GetAddress(masterElement.Host, masterElement.Port).ToString());
         }
 
         private static void SaveServiceState()
@@ -148,8 +163,11 @@ namespace SystemConfigurator
             var filePath = ConfigurationManager.AppSettings["Path"];
             if (!File.Exists(filePath))
             {
-                using (var myFile = File.Create(filePath)) { };
+                using (var myFile = File.Create(filePath))
+                {
+                }
             }
+
             using (var xmlWriter = XmlWriter.Create(filePath))
             {
                 masterService?.WriteXml(xmlWriter);
@@ -161,8 +179,11 @@ namespace SystemConfigurator
             var filePath = ConfigurationManager.AppSettings["Path"];
             if (!File.Exists(filePath))
             {
-                using (var myFile = File.Create(filePath)) { };
+                using (var myFile = File.Create(filePath))
+                {
+                }
             }
+
             using (var xmlReader = XmlReader.Create(filePath))
             {
                 masterService.ReadXml(xmlReader);
@@ -173,14 +194,14 @@ namespace SystemConfigurator
         {
             var domain = AppDomain.CreateDomain(domainName, null, null);
 
-            var repository = kernel.Get<IUserRepository>();
-            var generator = kernel.Get<IGenerator<int>>();
-            var validator = kernel.Get<IUserValidator>();
+            var repository = Kernel.Get<IUserRepository>();
+            var generator = Kernel.Get<IGenerator<int>>();
+            var validator = Kernel.Get<IUserValidator>();
 
             UserService service;
             try
             {
-                var typeToLoad = kernel.Get(Type.GetType(serviceType, true, false)).GetType().FullName;
+                var typeToLoad = Kernel.Get(Type.GetType(serviceType, true, false)).GetType().FullName;
                 string assemblyToLoad = Type.GetType(serviceType, true, false).Assembly.FullName;
                 var repo = domain.CreateInstanceAndUnwrap(repository.GetType().Assembly.FullName, repository.GetType().FullName);
                 var gen = domain.CreateInstanceAndUnwrap(generator.GetType().Assembly.FullName, generator.GetType().FullName);
@@ -189,26 +210,29 @@ namespace SystemConfigurator
             }
             catch (TypeLoadException ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
             catch (FileLoadException ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
             catch (Exception ex)
             {
-                if (boolSwitch.Enabled)
+                if (BoolSwitch.Enabled)
                 {
-                    Trace.TraceError("{0:HH:mm:ss.fff} Exception {1}", DateTime.Now, ex);
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
                 }
+
                 throw;
             }
 
@@ -225,7 +249,7 @@ namespace SystemConfigurator
             return address;
         }
 
-        private static void StartWCFService(IUserService service, string address)
+        private static void StartWcfService(IUserService service, string address)
         {
             serviceHost = new ServiceHost(service);
             var behaviour = serviceHost.Description.Behaviors.Find<ServiceBehaviorAttribute>();

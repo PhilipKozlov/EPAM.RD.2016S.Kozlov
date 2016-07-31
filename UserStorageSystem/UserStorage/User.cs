@@ -1,10 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ServiceModel;
-using System.Runtime.Serialization;
+﻿//-----------------------------------------------------------------------
+// <copyright file="User.cs" company="No Company">
+//     No Company. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 
 namespace UserStorage
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Runtime.Serialization;
+
     /// <summary>
     /// Represents user entity.
     /// </summary>
@@ -13,68 +18,71 @@ namespace UserStorage
     public class User : IEquatable<User>
     {
         #region Constructors
+
         /// <summary>
-        /// Instanciates User.
+        /// Initializes a new instance of the <see cref="User"/> class.
         /// </summary>
         public User()
         {
-            VisaRecords = new List<VisaRecord>();
-            Name = string.Empty;
-            LastName = string.Empty;
-            PersonalId = string.Empty;
+            this.VisaRecords = new List<VisaRecord>();
+            this.Name = string.Empty;
+            this.LastName = string.Empty;
+            this.PersonalId = string.Empty;
         }
         #endregion
 
         #region Properties
+
         /// <summary>
-        /// User identificator.
+        /// Gets or sets User Id.
         /// </summary>
         [DataMember]
         public int Id { get; set; }
 
         /// <summary>
-        /// User name.
+        /// Gets or sets User name.
         /// </summary>
         [DataMember]
         public string Name { get; set; }
 
         /// <summary>
-        /// User last name.
+        /// Gets or sets  User last name.
         /// </summary>
         [DataMember]
         public string LastName { get; set; }
 
         /// <summary>
-        /// User date of birth.
+        /// Gets or sets User date of birth.
         /// </summary>
         [DataMember]
         public DateTime DateOfBirth { get; set; }
 
         /// <summary>
-        /// User personal identificator.
+        /// Gets or sets User personal Id.
         /// </summary>
         [DataMember]
         public string PersonalId { get; set; }
 
         /// <summary>
-        /// User gender.
+        /// Gets or sets User gender.
         /// </summary>
         [DataMember]
         public Gender Gender { get; set; }
 
         /// <summary>
-        /// Collection of user visa records.
+        /// Gets or sets Collection of user visa records.
         /// </summary>
         [DataMember]
         public List<VisaRecord> VisaRecords { get; set; }
         #endregion
 
         #region Public Methods
+
         /// <summary>
         /// Returns a string that represents the current User.
         /// </summary>
         /// <returns> A string that represents the current User.</returns>
-        public override string ToString() => $"{Id} {Name} {LastName} {PersonalId}";
+        public override string ToString() => $"{this.Id} {this.Name} {this.LastName} {this.PersonalId}";
 
         /// <summary>
         /// Determines whether the specified object is equal to the current object.
@@ -84,8 +92,16 @@ namespace UserStorage
         public override bool Equals(object obj)
         {
             var other = obj as User;
-            if (other == null) return false;
-            if (Equals(other)) return true;
+            if (other == null)
+            {
+                return false;
+            }
+
+            if (this.Equals(other))
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -96,12 +112,12 @@ namespace UserStorage
         public override int GetHashCode()
         {
             int? hash = 17;
-            hash = hash * 23 + Id.GetHashCode();
-            hash = hash * 23 + Name?.GetHashCode();
-            hash = hash * 23 + LastName?.GetHashCode();
-            hash = hash * 23 + DateOfBirth.GetHashCode();
-            hash = hash * 23 + PersonalId?.GetHashCode();
-            hash = hash * 23 + Gender.GetHashCode();
+            hash = (hash * 23) + this.Id.GetHashCode();
+            hash = (hash * 23) + this.Name?.GetHashCode();
+            hash = (hash * 23) + this.LastName?.GetHashCode();
+            hash = (hash * 23) + this.DateOfBirth.GetHashCode();
+            hash = (hash * 23) + this.PersonalId?.GetHashCode();
+            hash = (hash * 23) + this.Gender.GetHashCode();
             return hash.GetValueOrDefault();
         }
 
@@ -112,9 +128,14 @@ namespace UserStorage
         /// <returns> True if the specified User is equal to the User object; otherwise, false.</returns>
         public bool Equals(User other)
         {
-            if (other.Name == Name && other.LastName == LastName) return true;
+            if (other.Name == this.Name && other.LastName == this.LastName)
+            {
+                return true;
+            }
+
             return false;
         }
+
         #endregion
     }
 }
