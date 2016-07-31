@@ -30,7 +30,7 @@ namespace UserStorage.Tests
             };
             var expected = 1;
             var actual = userService.CreateUser(user);
-            Assert.AreEqual(expected, actual);
+            Assert.AreEqual(expected, actual.Id);
         }
 
         [TestMethod]
@@ -61,7 +61,7 @@ namespace UserStorage.Tests
             };
             userService.CreateUser(user);
             var expected = userService.FindByName("John");
-            Assert.AreEqual(expected.ElementAt(0), user.Id);
+            Assert.AreEqual(expected.ElementAt(0), user);
         }
 
         [TestMethod]
@@ -76,7 +76,7 @@ namespace UserStorage.Tests
             };
             userService.CreateUser(user);
             var expected = userService.FindByNameAndLastName("John", "Doe");
-            Assert.AreEqual(expected.ElementAt(0), user.Id);
+            Assert.AreEqual(expected.ElementAt(0), user);
         }
 
         [TestMethod]
@@ -91,7 +91,7 @@ namespace UserStorage.Tests
             };
             userService.CreateUser(user);
             var expected = userService.FindByPersonalId("12345678901234");
-            Assert.AreEqual(expected.ElementAt(0), user.Id);
+            Assert.AreEqual(expected.ElementAt(0), user);
         }
 
         [TestMethod]
