@@ -90,12 +90,12 @@ namespace SystemConfigurator
         {
             if (masterService == null)
             {
-                serviceHost.Close();
+                serviceHost?.Close();
                 return;
             }
 
             SaveServiceState();
-            serviceHost.Close();
+            serviceHost?.Close();
         }
 
         #endregion
@@ -215,7 +215,7 @@ namespace SystemConfigurator
                 var repo = domain.CreateInstanceAndUnwrap(repository.GetType().Assembly.FullName, repository.GetType().FullName);
                 var gen = domain.CreateInstanceAndUnwrap(generator.GetType().Assembly.FullName, generator.GetType().FullName);
                 var val = domain.CreateInstanceAndUnwrap(validator.GetType().Assembly.FullName, validator.GetType().FullName);
-                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new object[] { gen, val, repo, address }, null, null) as UserService;
+                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new[] { gen, val, repo, address }, null, null) as UserService;
             }
             catch (TypeLoadException ex)
             {
@@ -251,9 +251,22 @@ namespace SystemConfigurator
         private static IPEndPoint GetAddress(string host, string port)
         {
             IPAddress ip;
-            IPAddress.TryParse(host, out ip);
+            if (!IPAddress.TryParse(host, out ip))
+            {
+                throw new ArgumentException(nameof(host));
+            }
+
             int p;
-            int.TryParse(port, out p);
+            if (!int.TryParse(port, out p))
+            {
+                throw new ArgumentException(nameof(ip));
+            }
+
+            if (p < IPEndPoint.MinPort || p > IPEndPoint.MaxPort)
+            {
+                throw new ArgumentException(nameof(port));
+            }
+
             var address = new IPEndPoint(ip, p);
             return address;
         }
@@ -262,10 +275,40 @@ namespace SystemConfigurator
         {
             serviceHost = new ServiceHost(service);
             var behaviour = serviceHost.Description.Behaviors.Find<ServiceBehaviorAttribute>();
-            behaviour.IncludeExceptionDetailInFaults = true;
+            //behaviour.IncludeExceptionDetailInFaults = true;
             behaviour.InstanceContextMode = InstanceContextMode.Single;
             serviceHost.AddServiceEndpoint(typeof(IUserService), new NetTcpBinding(), $"net.tcp://{address}");
-            serviceHost.Open();
+            try
+            {
+                serviceHost.Open();
+            }
+            catch (TimeoutException ex)
+            {
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
+                }
+
+                throw;
+            }
+            catch (CommunicationObjectFaultedException ex)
+            {
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
+                }
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
+                }
+
+                throw;
+            }
         }
         #endregion
     }

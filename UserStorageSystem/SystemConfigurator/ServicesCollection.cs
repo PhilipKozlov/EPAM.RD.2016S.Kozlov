@@ -21,7 +21,7 @@ namespace SystemConfigurator
         /// </summary>
         /// <param name="i"> Element index.</param>
         /// <returns> ServiceElement instance.</returns>
-        public ServiceElement this[int i] => (ServiceElement)base.BaseGet(i);
+        public ServiceElement this[int i] => (ServiceElement)BaseGet(i);
 
         #endregion
 

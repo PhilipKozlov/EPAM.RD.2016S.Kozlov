@@ -25,12 +25,7 @@ namespace Validator
         /// <returns> True if user instance is valid; otherwise - false.</returns>
         public bool IsValid(User user)
         {
-            if (user == null)
-            {
-                return false;
-            }
-
-            if (string.IsNullOrEmpty(user.Name) || string.IsNullOrEmpty(user.LastName))
+            if (string.IsNullOrEmpty(user?.Name) || string.IsNullOrEmpty(user.LastName))
             {
                 return false;
             }

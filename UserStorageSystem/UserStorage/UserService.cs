@@ -13,6 +13,7 @@ namespace UserStorage
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
+    using System.ServiceModel;
     using System.Threading.Tasks;
     using System.Xml;
     using System.Xml.Linq;
@@ -57,6 +58,21 @@ namespace UserStorage
         /// <param name="address"> Service address.</param>
         public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository, IPEndPoint address) : this()
         {
+            if (idGenerator == null)
+            {
+                throw new ArgumentNullException(nameof(idGenerator));
+            }
+
+            if (userValidator == null)
+            {
+                throw new ArgumentNullException(nameof(userValidator));
+            }
+
+            if (userRepository == null)
+            {
+                throw new ArgumentNullException(nameof(userRepository));
+            }
+
             this.idGenerator = idGenerator;
             this.userValidator = userValidator;
             this.userRepository = userRepository;
@@ -112,7 +128,7 @@ namespace UserStorage
         {
             if (!this.IsMaster())
             {
-                throw new NotSupportedException();
+                throw new FaultException("Action is not supported.");
             }
 
             if (BoolSwitch.Enabled)
@@ -122,12 +138,24 @@ namespace UserStorage
 
             if (!this.userValidator.IsValid(user))
             {
-                throw new ArgumentException(nameof(user));
+                throw new FaultException("User validation failed.");
             }
 
             this.lastUserId = this.idGenerator.GenerateId(this.lastUserId);
             user.Id = this.lastUserId;
-            this.userRepository.Create(user);
+            try
+            {
+                this.userRepository.Create(user);
+            }
+            catch (Exception ex)
+            {
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
+                }
+
+                throw new FaultException(ex.Message);
+            }
 
             var message = new StorageChangedMessage { IsAdded = true, User = user };
             this.NotifySlaves(message);
@@ -142,7 +170,7 @@ namespace UserStorage
         {
             if (!this.IsMaster())
             {
-                throw new NotSupportedException();
+                throw new FaultException("Action is not supported.");
             }
 
             if (BoolSwitch.Enabled)
@@ -150,7 +178,19 @@ namespace UserStorage
                 Trace.TraceInformation("Delete user. {user.ToString()}");
             }
 
-            this.userRepository.Delete(user);
+            try
+            {
+                this.userRepository.Delete(user);
+            }
+            catch (Exception ex)
+            {
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
+                }
+
+                throw new FaultException(ex.Message);
+            }
 
             var message = new StorageChangedMessage { IsRemoved = true, User = user };
             this.NotifySlaves(message);
@@ -168,7 +208,22 @@ namespace UserStorage
                 Trace.TraceInformation($"Find user by name = {name}.");
             }
 
-            return this.userRepository.Find(u => u.Name == name).ToList();
+            List<User> users;
+            try
+            {
+                users = this.userRepository.Find(u => u.Name == name).ToList();
+            }
+            catch (Exception ex)
+            {
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
+                }
+
+                throw new FaultException(ex.Message);
+            }
+
+            return users;
         }
 
         /// <summary>
@@ -184,7 +239,22 @@ namespace UserStorage
                 Trace.TraceInformation($"Find user by name and last name, name = {name}, last name = {lastName}.");
             }
 
-            return this.userRepository.Find(u => u.Name == name && u.LastName == lastName).ToList();
+            List<User> users;
+            try
+            {
+                users = this.userRepository.Find(u => u.Name == name && u.LastName == lastName).ToList();
+            }
+            catch (Exception ex)
+            {
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
+                }
+
+                throw new FaultException(ex.Message);
+            }
+
+            return users;
         }
 
         /// <summary>
@@ -199,7 +269,22 @@ namespace UserStorage
                 Trace.TraceInformation($"Find user by personalId, personalId = {personalId}.");
             }
 
-            return this.userRepository.Find(u => u.PersonalId == personalId).ToList();
+            List<User> users;
+            try
+            {
+                users = this.userRepository.Find(u => u.PersonalId == personalId).ToList();
+            }
+            catch (Exception ex)
+            {
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
+                }
+
+                throw new FaultException(ex.Message);
+            }
+
+            return users;
         }
         #endregion
 
@@ -352,6 +437,8 @@ namespace UserStorage
                         var serializer = new XmlSerializer(typeof(StorageChangedMessage));
                         var message = serializer.Deserialize(new MemoryStream(buffer)) as StorageChangedMessage;
                         this.UpdateData(message);
+                        var stream = new MemoryStream();
+                        await networkStream.WriteAsync(stream.GetBuffer(), 0, stream.GetBuffer().Length);
                     }
                 }
             });
@@ -376,6 +463,8 @@ namespace UserStorage
                         using (var networkStream = tcpClient.GetStream())
                         {
                             await networkStream.WriteAsync(stream.GetBuffer(), 0, stream.GetBuffer().Length);
+                            var buffer = new byte[1024];
+                            var byteCount = await networkStream.ReadAsync(buffer, 0, buffer.Length);
                         }
                     }
                 }

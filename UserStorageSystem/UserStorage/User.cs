@@ -97,12 +97,7 @@ namespace UserStorage
                 return false;
             }
 
-            if (this.Equals(other))
-            {
-                return true;
-            }
-
-            return false;
+            return this.Equals(other);
         }
 
         /// <summary>
