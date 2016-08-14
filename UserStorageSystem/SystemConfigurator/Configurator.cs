@@ -59,7 +59,17 @@ namespace SystemConfigurator
         /// </summary>
         public static void StartServer()
         {
-            var section = (ServiceConfigSection)ConfigurationManager.GetSection("ServiceConfig");
+            ServiceConfigSection section = null;
+            try
+            {
+                section = (ServiceConfigSection)ConfigurationManager.GetSection("ServiceConfig");
+            }
+            catch (ConfigurationErrorsException ex)
+            {
+                LogException(ex);
+                throw;
+            }
+
             if (section != null)
             {
                 var serviceElement = section.ServiceItems.Cast<ServiceElement>().SingleOrDefault();
@@ -88,14 +98,32 @@ namespace SystemConfigurator
         /// </summary>
         public static void ShutDownServer()
         {
-            if (masterService == null)
+            try
             {
                 serviceHost?.Close();
+            }
+            catch (TimeoutException ex)
+            {
+                LogException(ex);
+                throw;
+            }
+            catch (CommunicationObjectFaultedException ex)
+            {
+                LogException(ex);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+                throw;
+            }
+
+            if (masterService == null)
+            {
                 return;
             }
 
             SaveServiceState();
-            serviceHost?.Close();
         }
 
         #endregion
@@ -120,13 +148,15 @@ namespace SystemConfigurator
         private static void ConfigureSlave(ServiceElement slaveElement)
         {
             var address = GetAddress(slaveElement.Host, slaveElement.Port);
-            var service = CreateServiceInAppDomain($"SlaveServiceDomain{slaveElement.Port}", slaveElement.Type, address);
+            int internalPort = 0;
+            int.TryParse(slaveElement.InternalCommunicationPort, out internalPort);
+            var service = CreateServiceInAppDomain($"SlaveServiceDomain{slaveElement.Port}", slaveElement.Type, address, internalPort);
             StartWcfService(service, address.ToString());
         }
 
         private static void ConfigureMaster(ServiceElement masterElement, IEnumerable<SlaveElement> slaveElements)
         {
-            var serviceAdresses = slaveElements.Select(s => new IPEndPoint(IPAddress.Parse(s.Host), Convert.ToInt32(s.Port))).ToList();
+            var serviceAdresses = slaveElements.Select(s => new IPEndPoint(IPAddress.Parse(s.Host), Convert.ToInt32(s.InternalCommunicationPort))).ToList();
 
             try
             {
@@ -137,29 +167,17 @@ namespace SystemConfigurator
             }
             catch (TypeLoadException ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
             }
             catch (FileLoadException ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
             }
 
@@ -172,7 +190,7 @@ namespace SystemConfigurator
             var filePath = ConfigurationManager.AppSettings["Path"];
             if (!File.Exists(filePath))
             {
-                using (var myFile = File.Create(filePath))
+                using (File.Create(filePath))
                 {
                 }
             }
@@ -188,7 +206,7 @@ namespace SystemConfigurator
             var filePath = ConfigurationManager.AppSettings["Path"];
             if (!File.Exists(filePath))
             {
-                using (var myFile = File.Create(filePath))
+                using (File.Create(filePath))
                 {
                 }
             }
@@ -199,7 +217,7 @@ namespace SystemConfigurator
             }
         }
 
-        private static UserService CreateServiceInAppDomain(string domainName, string serviceType, IPEndPoint address)
+        private static UserService CreateServiceInAppDomain(string domainName, string serviceType, IPEndPoint address, int internalPort = 0)
         {
             var domain = AppDomain.CreateDomain(domainName, null, null);
 
@@ -215,33 +233,21 @@ namespace SystemConfigurator
                 var repo = domain.CreateInstanceAndUnwrap(repository.GetType().Assembly.FullName, repository.GetType().FullName);
                 var gen = domain.CreateInstanceAndUnwrap(generator.GetType().Assembly.FullName, generator.GetType().FullName);
                 var val = domain.CreateInstanceAndUnwrap(validator.GetType().Assembly.FullName, validator.GetType().FullName);
-                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new[] { gen, val, repo, address }, null, null) as UserService;
+                service = domain.CreateInstanceAndUnwrap(assemblyToLoad, typeToLoad, false, BindingFlags.Default, null, new[] { gen, val, repo, address, internalPort }, null, null) as UserService;
             }
             catch (TypeLoadException ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
             }
             catch (FileLoadException ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
             }
 
@@ -275,7 +281,6 @@ namespace SystemConfigurator
         {
             serviceHost = new ServiceHost(service);
             var behaviour = serviceHost.Description.Behaviors.Find<ServiceBehaviorAttribute>();
-            //behaviour.IncludeExceptionDetailInFaults = true;
             behaviour.InstanceContextMode = InstanceContextMode.Single;
             serviceHost.AddServiceEndpoint(typeof(IUserService), new NetTcpBinding(), $"net.tcp://{address}");
             try
@@ -284,30 +289,26 @@ namespace SystemConfigurator
             }
             catch (TimeoutException ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
             }
             catch (CommunicationObjectFaultedException ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                LogException(ex);
                 throw;
+            }
+        }
+
+        private static void LogException(Exception ex)
+        {
+            if (BoolSwitch.Enabled)
+            {
+                Trace.TraceError($"{DateTime.Now} Exception {ex}");
             }
         }
         #endregion

@@ -1,24 +1,29 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using UserStorage;
-
-namespace Validator.Tests
+﻿namespace Validator.Tests
 {
+    using System;
+    using System.Collections.Generic;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
+    using UserStorage;
+
     [TestClass]
     public class UserValidatorTests
     {
         private readonly UserValidator validator = new UserValidator();
+        private User user = new User
+        {
+            Id = 1,
+            Name = "John",
+            LastName = "Smith",
+            DateOfBirth = DateTime.Now,
+            PersonalId = "12345678901234",
+            Gender = Gender.Male,
+            VisaRecords = new List<VisaRecord>()
+        };
 
         [TestMethod]
         public void IsValid_ValidUser_ReturnTrue()
         {
-            var user = new User
-            {
-                Name = "John",
-                LastName = "Doe",
-                PersonalId = "12345678901234"
-            };
-            var actual = this.validator.IsValid(user);
+            var actual = this.validator.IsValid(this.user);
             Assert.IsTrue(actual);
         }
 
@@ -37,92 +42,96 @@ namespace Validator.Tests
         }
 
         [TestMethod]
-        public void IsValid_UserWithInvalidPersonalId_ReturnFalse()
+        public void IsValid_UserWithNullPersonalId_ReturnFalse()
         {
-            var actual = this.validator.IsValid(new User());
+            this.user.PersonalId = null;
+            var actual = this.validator.IsValid(this.user);
+            Assert.IsFalse(actual);
+        }
+
+        [TestMethod]
+        public void IsValid_UserWithEmptyPersonalId_ReturnFalse()
+        {
+            this.user.PersonalId = string.Empty;
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
 
         [TestMethod]
         public void IsValid_UserWithPersonalIdMoreThan14Characters_ReturnFalse()
         {
-            var user = new User {PersonalId = "1111111111111111"};
-            var actual = this.validator.IsValid(user);
+            this.user.PersonalId = "1111111111111111";
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
 
         [TestMethod]
         public void IsValid_UserWithPersonalIdLessThan14Characters_ReturnFalse()
         {
-            var user = new User {PersonalId = "11"};
-            var actual = this.validator.IsValid(user);
+            this.user.PersonalId = "111";
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
 
         [TestMethod]
         public void IsValid_UserWithNameContainingNonLetters_ReturnFalse()
         {
-            var user = new User {Name = "10"};
-            var actual = this.validator.IsValid(user);
+            this.user.Name = "11";
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
 
         [TestMethod]
         public void IsValid_UserWithLastNameContainingNonLetters_ReturnFalse()
         {
-            var user = new User {LastName = "10"};
-            var actual = this.validator.IsValid(user);
+            this.user.LastName = "11";
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
 
         [TestMethod]
         public void IsValid_UserWithVisaStartDateGreaterThanEndDate_ReturnFalse()
         {
-            var user = new User();
-            var visa = new VisaRecord {Start = DateTime.Now};
+            var visa = new VisaRecord { Start = DateTime.Now };
             var date = DateTime.Now;
             visa.End = date.AddDays(-1);
-            user.VisaRecords.Add(visa);
-            var actual = this.validator.IsValid(user);
+            this.user.VisaRecords.Add(visa);
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
 
         [TestMethod]
         public void IsValid_UserWithVisaCountryContainingNonLetters_ReturnFalse()
         {
-            var user = new User();
-            var visa = new VisaRecord {Start = DateTime.Now};
+            var visa = new VisaRecord { Start = DateTime.Now };
             var date = DateTime.Now;
             visa.End = date.AddDays(10);
             visa.Country = "10";
-            user.VisaRecords.Add(visa);
-            var actual = this.validator.IsValid(user);
+            this.user.VisaRecords.Add(visa);
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
 
         [TestMethod]
         public void IsValid_UserWithOneOfTwoVisasInvalid_ReturnFalse()
         {
-            var user = new User();
-            var visa = new VisaRecord {Start = DateTime.Now};
+            var visa = new VisaRecord { Start = DateTime.Now };
             var date = DateTime.Now;
             visa.End = date.AddDays(10);
             visa.Country = "10";
             var invalidVisa = new VisaRecord();
-            user.VisaRecords.Add(visa);
-            user.VisaRecords.Add(invalidVisa);
-            var actual = this.validator.IsValid(user);
+            this.user.VisaRecords.Add(visa);
+            this.user.VisaRecords.Add(invalidVisa);
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
 
         [TestMethod]
         public void IsValid_UserWithNullVisaRecords_ReturnFalse()
         {
-            var user = new User {VisaRecords = null};
-            var actual = this.validator.IsValid(user);
+            this.user.VisaRecords = null;
+            var actual = this.validator.IsValid(this.user);
             Assert.IsFalse(actual);
         }
-
-
     }
 }

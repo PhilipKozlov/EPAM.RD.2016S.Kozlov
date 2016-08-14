@@ -1,14 +1,16 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using IDGenerator;
-using Validator;
-using DAL;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-
-namespace UserStorage.Tests
+﻿namespace UserStorage.Tests
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Net;
+    using System.ServiceModel;
+    using System.Xml;
+    using DAL;
+    using IDGenerator;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
+    using Validator;
+
     [TestClass]
     public class UserServiceTests
     {
@@ -17,9 +19,8 @@ namespace UserStorage.Tests
         private readonly IUserValidator userValidator = new UserValidator();
         private readonly IPEndPoint address = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 1111);
 
-
         [TestMethod]
-        public void CreateUser_NewUser_ReturnOne()
+        public void CreateUser_NewUser_ReturnUserWithIdOne()
         {
             var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, new List<IPEndPoint>());
             var user = new User
@@ -46,7 +47,7 @@ namespace UserStorage.Tests
             var expected = 0;
             userService.CreateUser(user);
             userService.DeleteUser(user);
-            Assert.AreEqual(expected, userRepository.GetAll().Count);
+            Assert.AreEqual(expected, this.userRepository.GetAll().Count);
         }
 
         [TestMethod]
@@ -95,20 +96,94 @@ namespace UserStorage.Tests
         }
 
         [TestMethod]
-        [ExpectedException(typeof(NotSupportedException))]
-        public void CreateUser_NewUser_NotSupportedException()
+        [ExpectedException(typeof(FaultException))]
+        public void CreateUser_CreatingUserOnSlave_FaultException()
         {
-            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address);
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, 0);
             userService.CreateUser(new User());
         }
 
         [TestMethod]
-        [ExpectedException(typeof(NotSupportedException))]
-        public void DeleteUser_User_NotSupportedException()
+        [ExpectedException(typeof(FaultException))]
+        public void DeleteUser_DeletingUserFromSlave_FaultException()
         {
-            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address);
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, 0);
             userService.DeleteUser(new User());
         }
 
+        [TestMethod]
+        [ExpectedException(typeof(NotSupportedException))]
+        public void ReadXml_OnSlave_NotSupportedException()
+        {
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, 0);
+            using (var reader = XmlReader.Create("test.xml"))
+            {
+                userService.ReadXml(reader);
+            }
+        }
+
+        [TestMethod]
+        public void ReadXml_EmptyXmlFile_NoExceptionIsThrown()
+        {
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, new List<IPEndPoint>());
+            using (var reader = XmlReader.Create("test.xml"))
+            {
+                userService.ReadXml(reader);
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(NotSupportedException))]
+        public void WriteXml_OnSlave_NotSupportedException()
+        {
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, 0);
+            using (var writer = XmlWriter.Create("test.xml"))
+            {
+                userService.WriteXml(writer);
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void WriteXml_NullXmlWriter_InvalidOperationException()
+        {
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, new List<IPEndPoint>());
+            userService.WriteXml(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Ctor_NullIdGenerator_ArgumentNullException()
+        {
+            var userService = new UserService(null, this.userValidator, this.userRepository, this.address, 0);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Ctor_NullUserValidator_ArgumentNullException()
+        {
+            var userService = new UserService(this.idGenerator, null, this.userRepository, this.address, 0);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Ctor_NullUserRepository_ArgumentNullException()
+        {
+            var userService = new UserService(this.idGenerator, this.userValidator, null, this.address, 0);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Ctor_NullAddress_ArgumentNullException()
+        {
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, null, 0);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Ctor_NullServices_ArgumentNullException()
+        {
+            var userService = new UserService(this.idGenerator, this.userValidator, this.userRepository, this.address, null);
+        }
     }
 }

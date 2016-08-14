@@ -14,7 +14,6 @@ namespace UserStorage
     using System.Net;
     using System.Net.Sockets;
     using System.ServiceModel;
-    using System.Threading.Tasks;
     using System.Xml;
     using System.Xml.Linq;
     using System.Xml.Schema;
@@ -34,6 +33,7 @@ namespace UserStorage
         private readonly IUserValidator userValidator;
         private readonly IUserRepository userRepository;
         private readonly IPEndPoint address;
+        private readonly int internalCommunicationPort;
         private readonly List<IPEndPoint> services;
         private int lastUserId;
 
@@ -56,7 +56,8 @@ namespace UserStorage
         /// <param name="userValidator"> UserValidator instance.</param>
         /// <param name="userRepository"> UserRepository instance.</param>
         /// <param name="address"> Service address.</param>
-        public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository, IPEndPoint address) : this()
+        /// <param name="internalPort"> Port for receiving messages from the master.</param>
+        public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository, IPEndPoint address, int internalPort) : this()
         {
             if (idGenerator == null)
             {
@@ -73,10 +74,16 @@ namespace UserStorage
                 throw new ArgumentNullException(nameof(userRepository));
             }
 
+            if (address == null)
+            {
+                throw new ArgumentNullException(nameof(address));
+            }
+
             this.idGenerator = idGenerator;
             this.userValidator = userValidator;
             this.userRepository = userRepository;
             this.address = address;
+            this.internalCommunicationPort = internalPort;
             this.StartListener();
         }
 
@@ -89,7 +96,7 @@ namespace UserStorage
         /// <param name="address"> Service address.</param>
         /// <param name="services"> Collection of slave services.</param>
         public UserService(IGenerator<int> idGenerator, IUserValidator userValidator, IUserRepository userRepository, IPEndPoint address, List<IPEndPoint> services) 
-            : this(idGenerator, userValidator, userRepository, address)
+            : this(idGenerator, userValidator, userRepository, address, 0)
         {
             if (services == null)
             {
@@ -149,11 +156,7 @@ namespace UserStorage
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                this.LogException(ex);
                 throw new FaultException(ex.Message);
             }
 
@@ -184,11 +187,7 @@ namespace UserStorage
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                this.LogException(ex);
                 throw new FaultException(ex.Message);
             }
 
@@ -212,14 +211,14 @@ namespace UserStorage
             try
             {
                 users = this.userRepository.Find(u => u.Name == name).ToList();
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceInformation($"Users found = {users.Count}.");
+                }
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                this.LogException(ex);
                 throw new FaultException(ex.Message);
             }
 
@@ -243,14 +242,14 @@ namespace UserStorage
             try
             {
                 users = this.userRepository.Find(u => u.Name == name && u.LastName == lastName).ToList();
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceInformation($"Users found = {users.Count}.");
+                }
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                this.LogException(ex);
                 throw new FaultException(ex.Message);
             }
 
@@ -273,14 +272,14 @@ namespace UserStorage
             try
             {
                 users = this.userRepository.Find(u => u.PersonalId == personalId).ToList();
+                if (BoolSwitch.Enabled)
+                {
+                    Trace.TraceInformation($"Users found = {users.Count}.");
+                }
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                this.LogException(ex);
                 throw new FaultException(ex.Message);
             }
 
@@ -329,20 +328,12 @@ namespace UserStorage
             }
             catch (InvalidOperationException ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                this.LogException(ex);
                 throw;
             }
             catch (Exception ex)
             {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
+                this.LogException(ex);
                 throw;
             }
 
@@ -360,13 +351,29 @@ namespace UserStorage
                 throw new NotSupportedException();
             }
 
+            if (xmlWriter == null)
+            {
+                throw new ArgumentNullException(nameof(xmlWriter));
+            }
+
+            IList<User> users;
+            try
+            {
+                users = this.userRepository.GetAll();
+            }
+            catch (Exception ex)
+            {
+                this.LogException(ex);
+                throw;
+            }
+
             var doc = new XDocument(
                 new XElement(
                     "ServiceState",
                      new XElement("LastId", this.lastUserId),
                      new XElement(
                          "Users",
-                         this.userRepository.GetAll().Select(
+                         users.Select(
                              u => new XElement(
                                  "User",
                                   new XElement("Id", u.Id),
@@ -383,29 +390,10 @@ namespace UserStorage
                                                 new XElement("Country", vr.Country),
                                                 new XElement("Start", vr.Start),
                                                 new XElement("End", vr.End)))))))));
-            try
-            {
-                doc.Save(xmlWriter);
-            }
-            catch (InvalidOperationException ex)
-            {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
-                throw;
-            }
-            catch (Exception ex)
-            {
-                if (BoolSwitch.Enabled)
-                {
-                    Trace.TraceError($"{DateTime.Now} Exception {ex}");
-                }
-
-                throw;
-            }
+            doc.Save(xmlWriter);
         }
+
+        XmlSchema IXmlSerializable.GetSchema() => null;
 
         #endregion
 
@@ -419,73 +407,101 @@ namespace UserStorage
                 this.NotifySlaves(message);
             }
         }
-
-        private void StartListener()
+        
+        private async void StartListener()
         {
-            Task.Run(async () =>
+            var tcpListener = TcpListener.Create(this.internalCommunicationPort);
+            tcpListener.Start();
+            while (true)
             {
-                var tcpListener = TcpListener.Create(address.Port);
-                tcpListener.Start();
-                while (true)
+                using (var tcpClient = await tcpListener.AcceptTcpClientAsync())
+                using (var networkStream = tcpClient.GetStream())
                 {
-                    var tcpClient = await tcpListener.AcceptTcpClientAsync();
+                    // read message size from the stream
+                    var messageSize = new byte[4];
+                    await networkStream.ReadAsync(messageSize, 0, 4);
+                    var size = BitConverter.ToInt32(messageSize, 0);
+                    var buffer = new byte[size];
 
-                    using (var networkStream = tcpClient.GetStream())
-                    {
-                        var buffer = new byte[1024];
-                        var byteCount = await networkStream.ReadAsync(buffer, 0, buffer.Length);
-                        var serializer = new XmlSerializer(typeof(StorageChangedMessage));
-                        var message = serializer.Deserialize(new MemoryStream(buffer)) as StorageChangedMessage;
-                        this.UpdateData(message);
-                        var stream = new MemoryStream();
-                        await networkStream.WriteAsync(stream.GetBuffer(), 0, stream.GetBuffer().Length);
-                    }
+                    // read the actual message
+                    await networkStream.ReadAsync(buffer, 0, buffer.Length);
+                    var serializer = new XmlSerializer(typeof(StorageChangedMessage));
+                    var message = serializer.Deserialize(new MemoryStream(buffer)) as StorageChangedMessage;
+                    this.UpdateData(message);
+
+                    // send an empty message indicating that data has been updated
+                    await networkStream.WriteAsync(new byte[0], 0, 0);
                 }
-            });
+            }
         }
 
-        private void NotifySlaves(StorageChangedMessage message)
+        private async void NotifySlaves(StorageChangedMessage message)
         {
-            Task.Run(async () =>
+            var stream = new MemoryStream();
+            using (var textWriter = XmlWriter.Create(stream))
             {
-                var stream = new MemoryStream();
-                using (var textWriter = XmlWriter.Create(stream))
-                {
-                    var serializer = new XmlSerializer(typeof(StorageChangedMessage));
-                    serializer.Serialize(textWriter, message);
-                }
+                var serializer = new XmlSerializer(typeof(StorageChangedMessage));
+                serializer.Serialize(textWriter, message);
+            }
 
-                foreach (var addr in services)
+            foreach (var addr in this.services)
+            {
+                using (var tcpClient = new TcpClient())
                 {
-                    using (var tcpClient = new TcpClient())
+                    await tcpClient.ConnectAsync(addr.Address, addr.Port);
+                    using (var networkStream = tcpClient.GetStream())
                     {
-                        await tcpClient.ConnectAsync(addr.Address, addr.Port);
-                        using (var networkStream = tcpClient.GetStream())
-                        {
-                            await networkStream.WriteAsync(stream.GetBuffer(), 0, stream.GetBuffer().Length);
-                            var buffer = new byte[1024];
-                            var byteCount = await networkStream.ReadAsync(buffer, 0, buffer.Length);
-                        }
+                        // send message size
+                        var messageSize = BitConverter.GetBytes(stream.GetBuffer().Length);
+                        await networkStream.WriteAsync(messageSize, 0, messageSize.Length);
+
+                        // send the actual message
+                        await networkStream.WriteAsync(stream.GetBuffer(), 0, stream.GetBuffer().Length);
+
+                        // wait for confirmation from the slave that data has been updated
+                        var buffer = new byte[0];
+                        await networkStream.ReadAsync(buffer, 0, buffer.Length);
                     }
                 }
-            });
+            }
         }
 
         private void UpdateData(StorageChangedMessage message)
         {
             if (message.IsAdded)
             {
-                this.userRepository.Create(message.User);
+                try
+                {
+                    this.userRepository.Create(message.User);
+                }
+                catch (Exception ex)
+                {
+                    this.LogException(ex);
+                    throw new FaultException(ex.Message);
+                }
             }
 
             if (message.IsRemoved)
             {
-                this.userRepository.Delete(message.User);
+                try
+                {
+                    this.userRepository.Delete(message.User);
+                }
+                catch (Exception ex)
+                {
+                    this.LogException(ex);
+                    throw new FaultException(ex.Message);
+                }
             }
         }
 
-        XmlSchema IXmlSerializable.GetSchema() => null;
-
+        private void LogException(Exception ex)
+        {
+            if (BoolSwitch.Enabled)
+            {
+                Trace.TraceError($"{DateTime.Now} Exception {ex}");
+            }
+        }
         #endregion
     }
 }

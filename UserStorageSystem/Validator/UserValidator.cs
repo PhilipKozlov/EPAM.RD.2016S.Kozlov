@@ -67,7 +67,7 @@ namespace Validator
 
         private bool IsIdValid(string personalId)
         {
-            if (string.IsNullOrEmpty(personalId) || string.IsNullOrEmpty(personalId))
+            if (string.IsNullOrEmpty(personalId))
             {
                 return false;
             }

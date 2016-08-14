@@ -40,6 +40,11 @@ namespace UserStorage
                 throw new ArgumentNullException(nameof(services));
             }
 
+            if (address == null)
+            {
+                throw new ArgumentNullException(nameof(address));
+            }
+
             this.servicePool = services;
             this.address = address;
             this.nextInLine = 0;

@@ -83,6 +83,23 @@ namespace SystemConfigurator
         }
 
         /// <summary>
+        /// Gets or sets service port to receive messages from the master.
+        /// </summary>
+        [ConfigurationProperty("internalCommunicationPort", DefaultValue = "", IsKey = true, IsRequired = false)]
+        public string InternalCommunicationPort
+        {
+            get
+            {
+                return (string)base["internalCommunicationPort"];
+            }
+
+            set
+            {
+                base["internalCommunicationPort"] = value;
+            }
+        }
+
+        /// <summary>
         /// Gets service Slaves collection.
         /// </summary>
         [ConfigurationProperty("Slaves", IsDefaultCollection = false, IsRequired = false)]

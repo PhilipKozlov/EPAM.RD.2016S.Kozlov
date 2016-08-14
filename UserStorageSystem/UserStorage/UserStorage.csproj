@@ -52,7 +52,7 @@
     <Compile Include="ProxyService.cs" />
     <Compile Include="StorageChangedMessage.cs" />
     <Compile Include="User.cs" />
-    <Compile Include="VisaRecords.cs" />
+    <Compile Include="VisaRecord.cs" />
     <Compile Include="XDocumentExtensions.cs" />
   </ItemGroup>
   <ItemGroup>

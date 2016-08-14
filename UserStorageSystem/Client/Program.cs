@@ -7,6 +7,7 @@
     using System.Threading.Tasks;
     using UserStorage;
 
+    // A client application to test UserStorage functionality.
     internal class Program
     {
         private static void Main(string[] args)
@@ -26,7 +27,7 @@
         {
             while (true)
             {
-                Console.WriteLine("Search result = {0}", proxy.FindByNameAndLastName(name, lastName).Count());
+                Console.WriteLine($"Search result = {proxy.FindByNameAndLastName(name, lastName).Count()}");
                 Thread.Sleep(500);
             }
         }
@@ -44,10 +45,11 @@
             while (true)
             {
                 var user = proxy.CreateUser(newUser);
-                Console.WriteLine("New user : {0}", user);
+                Console.WriteLine($"New user : {user}");
                 Thread.Sleep(1000);
-                proxy.DeleteUser(user);
-                Console.WriteLine("User deleted.");
+                proxy.DeleteUser(newUser);
+                Console.WriteLine($"User deleted");
+                Thread.Sleep(1000);
             }
         }
 
@@ -65,7 +67,7 @@
             {
                 proxy.DeleteUser(newUser);
                 Console.WriteLine("User deleted.");
-                Thread.Sleep(2000);
+                Thread.Sleep(1500);
             }
         }
     }
